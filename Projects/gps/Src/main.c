@@ -11,41 +11,15 @@
   * The demo sequence starts when the user button is pressed.
   * Each time, the user button is pressed, the demo step is changed
   ******************************************************************************
-  * @attention
-  *
-  * <h2><center>&copy; COPYRIGHT(c) 2015 STMicroelectronics</center></h2>
-  *
-  * Redistribution and use in source and binary forms, with or without modification,
-  * are permitted provided that the following conditions are met:
-  *   1. Redistributions of source code must retain the above copyright notice,
-  *      this list of conditions and the following disclaimer.
-  *   2. Redistributions in binary form must reproduce the above copyright notice,
-  *      this list of conditions and the following disclaimer in the documentation
-  *      and/or other materials provided with the distribution.
-  *   3. Neither the name of STMicroelectronics nor the names of its contributors
-  *      may be used to endorse or promote products derived from this software
-  *      without specific prior written permission.
-  *
-  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-  * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
-  * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-  * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-  * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-  * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-  *
   ******************************************************************************
   */
 
 /* Includes ------------------------------------------------------------------*/
 #include <stdio.h>
 #include "main.h"
-//#include "stm32l0xx_hal_uart.h"
 #include "sim900.h"
 #include <GPRS_Shield_Arduino.h>
+#include "debug.h"
 
 
 /** @defgroup IHM04A1_Example_for_4_Unidirectionnal_motors
@@ -70,7 +44,6 @@ uint16_t gButtonPressed = 0;
 
 
 #define BAUDRATE  9600
-#define PUTCHAR_PROTOTYPE int fputc(int ch, FILE *f)
 	
 
 const char host_name[] = "paulfertser.info";
@@ -81,9 +54,9 @@ const char vtuin[] = "$VTUIN,001";
 const char vtag[] = "$VTAG,001";
 	
 uint8_t rx_buffer[RX_BUFFER_SIZE];
-UART_HandleTypeDef LUart;				// debug uart
 UART_HandleTypeDef UartGSM;			// gsm uart
 UART_HandleTypeDef UartGPS;			// gps uart
+static void *LSM6DS3_X_0_handle = NULL;
 
 
 char gps_message[256];
@@ -139,32 +112,13 @@ int main(void)
 	/* Process Unlocked */
 	__HAL_UNLOCK(&UartGPS); 
 	HAL_NVIC_EnableIRQ(USART1_IRQn);
-
-	
-	__LPUART1_CLK_ENABLE();
-	
-	LUart.Instance = LPUART1;
-	LUart.Init.BaudRate   = 115200;
-	LUart.Init.WordLength = UART_WORDLENGTH_8B;
-	LUart.Init.StopBits   = UART_STOPBITS_1;
-	LUart.Init.Parity     = UART_PARITY_NONE;
-	LUart.Init.HwFlowCtl  = UART_HWCONTROL_NONE;
-	LUart.Init.Mode       = UART_MODE_TX_RX;
-	LUart.AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_NO_INIT;
-	
-	if(HAL_UART_DeInit(&LUart) != HAL_OK)
-  {
-    Error_Handler(0);
-  }  
-  if(HAL_UART_Init(&LUart) != HAL_OK)
-  {
-    Error_Handler(0);
-  }
 		
 	DEBUG_PRINTF("\r\n\r\n\r\nSystem startup!\r\n");
 
 	// Init GSM
 	gsm(&UartGSM);//RX,TX,PWR,BaudRate
+	
+	BSP_ACCELERO_Init( LSM6DS3_X_0, &LSM6DS3_X_0_handle );
 	
   /* Infinite loop */
 	int count = 0;
@@ -271,8 +225,7 @@ void GPIO_Init(void)
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);	
 	
 	//UART2
-	GPIO_InitStruct.Pin = /*GPIO_PIN_0 | GPIO_PIN_1 
-											| */GPIO_PIN_2 | GPIO_PIN_3;
+	GPIO_InitStruct.Pin = GPIO_PIN_2 | GPIO_PIN_3;
   GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
@@ -299,14 +252,7 @@ void GPIO_Init(void)
 	HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);	
 	
 	HAL_GPIO_WritePin(GPIOB, GPIO_PIN_9, GPIO_PIN_SET);
-	
-	// GPS_3dFIX high - active
-//	GPIO_InitStruct.Pin = GPIO_PIN_9;
-//  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-//  GPIO_InitStruct.Pull = GPIO_NOPULL;
-//  GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
-	
-//	HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);	  
+
 	
 	////////////////////////////////////////////////
 	//GSM
@@ -315,9 +261,34 @@ void GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
 	
-	HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);	  
+	HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);	
+
+	//SPI Pin Init
+	GPIO_InitStruct.Pin = GPIO_PIN_15 | GPIO_PIN_14 |GPIO_PIN_13;
+  GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
+	GPIO_InitStruct.Alternate = GPIO_AF0_SPI2;
 	
+	// SPI CS
+	HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);	
 	
+	GPIO_InitStruct.Pin = GPIO_PIN_8;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
+	HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);	
+	
+	 /* Configure GPIO PINs to detect Interrupts */
+  GPIO_InitStruct.Pin = GPIO_PIN_10 | GPIO_PIN_9;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FAST;
+  GPIO_InitStruct.Pull  = GPIO_NOPULL;
+  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+  
+  /* Enable and set EXTI Interrupt priority */
+  HAL_NVIC_SetPriority(EXTI4_15_IRQn, 0x00, 0x00);
+  HAL_NVIC_EnableIRQ(EXTI4_15_IRQn);
 }
 
 /**
@@ -362,12 +333,6 @@ void ButtonHandler(void)
 }    
 
 
-PUTCHAR_PROTOTYPE
-{	
-	while(HAL_IS_BIT_CLR(LUart.Instance->ISR, UART_FLAG_TXE));
-	LUart.Instance->TDR = ch;
-  return ch;
-}
 
 #ifdef  USE_FULL_ASSERT
 

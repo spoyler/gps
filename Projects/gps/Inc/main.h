@@ -40,15 +40,11 @@
 #define __MAIN_H
 
 /* Includes ------------------------------------------------------------------*/
-#ifdef USE_STM32F4XX_NUCLEO
-#include "stm32f4xx_nucleo_ihm04a1.h"
-#endif
-#ifdef USE_STM32F0XX_NUCLEO
-#include "stm32f0xx_nucleo_ihm04a1.h"
-#endif
-#ifdef USE_STM32L0XX_NUCLEO
-#include "stm32l0xx_nucleo_ihm04a1.h"
-#endif
+
+//#include "stm32l0xx_nucleo_ihm04a1.h"
+#include "stm32l0xx_hal.h"
+#include "x_nucleo_iks01a1.h"
+#include "x_nucleo_iks01a1_accelero.h"
 /* Exported types ------------------------------------------------------------*/
 /* Exported constants --------------------------------------------------------*/
 /* Exported functions ------------------------------------------------------- */

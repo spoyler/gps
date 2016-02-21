@@ -400,12 +400,12 @@ ARM Macro Assembler    Page 7
               00000000 
 Command Line: --debug --xref --diag_suppress=9931 --cpu=Cortex-M0+ --apcs=inter
 work --depend=stm32l053r8_nucleo\startup_stm32l053xx.d -ostm32l053r8_nucleo\sta
-rtup_stm32l053xx.o -ID:\prj\GPS\Projects\gps\MDK-ARM\STM32L053R8-Nucleo\RTE -IC
-:\Keil_v5\ARM\PACK\ARM\CMSIS\4.5.0\CMSIS\Include -IC:\Keil_v5\ARM\PACK\Keil\STM
-32L0xx_DFP\1.4.0\Device\Include --predefine="__EVAL SETA 1" --predefine="__MICR
-OLIB SETA 1" --predefine="__UVISION_VERSION SETA 518" --predefine="_RTE_ SETA 1
-" --predefine="STM32L051xx SETA 1" --list=startup_stm32l053xx.lst startup_stm32
-l053xx.s
+rtup_stm32l053xx.o -IC:\Users\админ\Documents\projects\gps\gps\Projects\gps\MDK
+-ARM\STM32L053R8-Nucleo\RTE -IC:\Keil_v5\ARM\PACK\ARM\CMSIS\4.5.0\CMSIS\Include
+ -IC:\Keil_v5\ARM\PACK\Keil\STM32L0xx_DFP\1.4.0\Device\Include --predefine="__E
+VAL SETA 1" --predefine="__MICROLIB SETA 1" --predefine="__UVISION_VERSION SETA
+ 518" --predefine="_RTE_ SETA 1" --predefine="STM32L051xx SETA 1" --list=startu
+p_stm32l053xx.lst startup_stm32l053xx.s
 
 
 

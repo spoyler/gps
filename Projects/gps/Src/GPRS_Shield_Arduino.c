@@ -32,6 +32,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "GPRS_Shield_Arduino.h"
+#include "debug.h"
 
 uint32_t str_to_ip(const char* str);
 // SoftwareSerial gprsSerial;

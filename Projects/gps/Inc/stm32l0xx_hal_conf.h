@@ -50,6 +50,7 @@
 /**
   * @brief This is the list of modules to be used in the HAL driver 
   */
+		 
 #define HAL_MODULE_ENABLED
 #define HAL_ADC_MODULE_ENABLED
 /* #define HAL_COMP_MODULE_ENABLED */
@@ -59,7 +60,7 @@
 #define HAL_DMA_MODULE_ENABLED
 #define HAL_FLASH_MODULE_ENABLED
 #define HAL_GPIO_MODULE_ENABLED
-/* #define HAL_I2C_MODULE_ENABLED */
+#define HAL_I2C_MODULE_ENABLED
 /* #define HAL_I2S_MODULE_ENABLED */   
 /* #define HAL_IWDG_MODULE_ENABLED */
 /* #define HAL_LCD_MODULE_ENABLED */ 

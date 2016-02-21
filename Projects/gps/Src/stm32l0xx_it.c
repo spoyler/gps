@@ -141,8 +141,7 @@ void EXTI0_1_IRQHandler(void)
   */
 void EXTI4_15_IRQHandler(void)
 {
-  
-  HAL_GPIO_EXTI_IRQHandler(KEY_BUTTON_PIN);
+
 }
 /**
   * @brief  This function handles PPP interrupt request.

@@ -4,7 +4,7 @@
  *      *** Do not modify ! ***
  *
  * Project: 'Project' 
- * Target:  'STM32L053R8_NUCLEO' 
+ * Target:  'STM32L051_NUCLEO' 
  */
 
 #ifndef RTE_COMPONENTS_H
