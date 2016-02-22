@@ -59,6 +59,11 @@
 
 static uint32_t I2C_EXPBD_Timeout = 100;    /*<! Value of Timeout when I2C communication fails */
 static I2C_HandleTypeDef I2C_EXPBD_Handle;
+static SPI_HandleTypeDef SpiHandle;
+
+#define RX_TX_BUFFER_SIZE 32
+static uint8_t spi_rx_buffer[RX_TX_BUFFER_SIZE];
+static uint8_t spi_tx_buffer[RX_TX_BUFFER_SIZE];
 
 /**
  * @}
@@ -123,49 +128,20 @@ DrvStatusTypeDef LSM6DS0_Sensor_IO_ITConfig( void )
  */
 DrvStatusTypeDef LSM6DS3_Sensor_IO_ITConfig( void )
 {
-
-  /* At the moment this feature is only implemented for LSM6DS3 */
-  GPIO_InitTypeDef GPIO_InitStructureInt1;
-  GPIO_InitTypeDef GPIO_InitStructureInt2;
-  /* Enable INT1 GPIO clock */
-  M_INT1_GPIO_CLK_ENABLE();
-  
-  /* Configure GPIO PINs to detect Interrupts */
-  GPIO_InitStructureInt1.Pin = M_INT1_PIN;
-  GPIO_InitStructureInt1.Mode = GPIO_MODE_IT_RISING;
-#if ((defined (USE_STM32F4XX_NUCLEO)) || (defined (USE_STM32L0XX_NUCLEO)) || (defined (USE_STM32L4XX_NUCLEO)))
-  GPIO_InitStructureInt1.Speed = GPIO_SPEED_FAST;
-#endif
-  
-#if (defined (USE_STM32L1XX_NUCLEO))
-  GPIO_InitStructureInt1.Speed = GPIO_SPEED_MEDIUM;
-#endif
-  GPIO_InitStructureInt1.Pull  = GPIO_NOPULL;
-  HAL_GPIO_Init(M_INT1_GPIO_PORT, &GPIO_InitStructureInt1);
+	GPIO_InitTypeDef GPIO_InitStruct;
+	
+	__GPIOA_CLK_ENABLE();
+	
+	 /* Configure GPIO PINs to detect Interrupts */
+  GPIO_InitStruct.Pin = GPIO_PIN_10 | GPIO_PIN_9;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FAST;
+  GPIO_InitStruct.Pull  = GPIO_NOPULL;
+  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
   
   /* Enable and set EXTI Interrupt priority */
-  HAL_NVIC_SetPriority(M_INT1_EXTI_IRQn, 0x00, 0x00);
-  HAL_NVIC_EnableIRQ(M_INT1_EXTI_IRQn);
-  
-  /* Enable INT2 GPIO clock */
-  M_INT2_GPIO_CLK_ENABLE();
-  
-  /* Configure GPIO PINs to detect Interrupts */
-  GPIO_InitStructureInt2.Pin = M_INT2_PIN;
-  GPIO_InitStructureInt2.Mode = GPIO_MODE_IT_RISING;
-#if ((defined (USE_STM32F4XX_NUCLEO)) || (defined (USE_STM32L0XX_NUCLEO)) || (defined (USE_STM32L4XX_NUCLEO)))
-  GPIO_InitStructureInt2.Speed = GPIO_SPEED_FAST;
-#endif
-  
-#if (defined (USE_STM32L1XX_NUCLEO))
-  GPIO_InitStructureInt2.Speed = GPIO_SPEED_MEDIUM;
-#endif
-  GPIO_InitStructureInt2.Pull  = GPIO_NOPULL;
-  HAL_GPIO_Init(M_INT2_GPIO_PORT, &GPIO_InitStructureInt2);
-  
-  /* Enable and set EXTI Interrupt priority */
-  HAL_NVIC_SetPriority(M_INT2_EXTI_IRQn, 0x00, 0x00);
-  HAL_NVIC_EnableIRQ(M_INT2_EXTI_IRQn);
+  HAL_NVIC_SetPriority(EXTI4_15_IRQn, 0x00, 0x00);
+  HAL_NVIC_EnableIRQ(EXTI4_15_IRQn);
   
   return COMPONENT_OK;
 }
@@ -223,7 +199,7 @@ uint8_t Sensor_IO_Read( void *handle, uint8_t ReadAddr, uint8_t *pBuffer, uint16
 {
   DrvContextTypeDef *ctx = (DrvContextTypeDef *)handle;
   
-  /* call I2C_EXPBD Read data bus function */
+	/* call I2C_EXPBD Read data bus function */
   if ( I2C_EXPBD_ReadData( ctx->address, ReadAddr, pBuffer, nBytesToRead ) )
   {
     return 1;
@@ -246,40 +222,29 @@ uint8_t Sensor_IO_Read( void *handle, uint8_t ReadAddr, uint8_t *pBuffer, uint16
  */
 static uint8_t I2C_EXPBD_Init( void )
 {
-  if(HAL_I2C_GetState( &I2C_EXPBD_Handle) == HAL_I2C_STATE_RESET )
-  {
+	
+	I2C_EXPBD_MspInit();
+	
+	SpiHandle.Instance               = SPI2;
   
-    /* I2C_EXPBD peripheral configuration */
-    
-#if ((defined (USE_STM32F4XX_NUCLEO)) || (defined (USE_STM32L1XX_NUCLEO)))
-    I2C_EXPBD_Handle.Init.ClockSpeed = NUCLEO_I2C_EXPBD_SPEED;
-    I2C_EXPBD_Handle.Init.DutyCycle = I2C_DUTYCYCLE_2;
-#endif
-    
-#if (defined (USE_STM32L0XX_NUCLEO))
-    I2C_EXPBD_Handle.Init.Timing = NUCLEO_I2C_EXPBD_TIMING_400KHZ;    /* 400KHz */
-#endif
-#if (defined (USE_STM32L4XX_NUCLEO))
-    I2C_EXPBD_Handle.Init.Timing = NUCLEO_I2C_EXPBD_TIMING_1000KHZ;   /* 1000KHz */
-#endif
-    
-    I2C_EXPBD_Handle.Init.OwnAddress1    = 0x33;
-    I2C_EXPBD_Handle.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
-    I2C_EXPBD_Handle.Instance            = NUCLEO_I2C_EXPBD;
-    
-    /* Init the I2C */
-    I2C_EXPBD_MspInit();
-    HAL_I2C_Init( &I2C_EXPBD_Handle );
-  }
+  SpiHandle.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_32;
+  SpiHandle.Init.Direction         = SPI_DIRECTION_2LINES;
+  SpiHandle.Init.CLKPhase          = SPI_PHASE_2EDGE;
+  SpiHandle.Init.CLKPolarity       = SPI_POLARITY_HIGH;
+  SpiHandle.Init.CRCCalculation    = 0;//SPI_CRCCALCULATION_DISABLE; //TODO
+  SpiHandle.Init.CRCPolynomial     = 7;
+  SpiHandle.Init.DataSize          = SPI_DATASIZE_8BIT;
+  SpiHandle.Init.FirstBit          = SPI_FIRSTBIT_MSB;
+  SpiHandle.Init.NSS               = SPI_NSS_SOFT;
+  SpiHandle.Init.TIMode            = 0;//SPI_TIMODE_DISABLE; //TODO
   
-  if( HAL_I2C_GetState( &I2C_EXPBD_Handle) == HAL_I2C_STATE_READY )
-  {
-    return 0;
-  }
-  else
-  {
-    return 1;
-  }
+  SpiHandle.Init.Mode = SPI_MODE_MASTER;
+
+  HAL_SPI_Init(&SpiHandle);
+	
+	__HAL_SPI_ENABLE(&SpiHandle);
+	
+	return 0;
 }
 
 
@@ -297,14 +262,24 @@ static uint8_t I2C_EXPBD_WriteData( uint8_t Addr, uint8_t Reg, uint8_t* pBuffer,
 {
 
   HAL_StatusTypeDef status = HAL_OK;
-  
-  status = HAL_I2C_Mem_Write( &I2C_EXPBD_Handle, Addr, ( uint16_t )Reg, I2C_MEMADD_SIZE_8BIT, pBuffer, Size, I2C_EXPBD_Timeout );
+	
+	spi_tx_buffer[0] = Reg;
+	
+	for (int i = 0; (i < Size) && (i < RX_TX_BUFFER_SIZE); ++i)
+	{
+		spi_tx_buffer[i + 1] = pBuffer[i];
+	}
+  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_RESET);
+	status = HAL_SPI_TransmitReceive(&SpiHandle, spi_tx_buffer, spi_rx_buffer, Size + 1, I2C_EXPBD_Timeout);
+	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_SET);
+	
+	return status;
                               
   /* Check the communication status */
   if( status != HAL_OK )
   {
   
-    /* Execute user timeout callback */
+    /* Execute user& timeout callback */
     I2C_EXPBD_Error( Addr );
     return 1;
   }
@@ -329,8 +304,22 @@ static uint8_t I2C_EXPBD_ReadData( uint8_t Addr, uint8_t Reg, uint8_t* pBuffer, 
 {
 
   HAL_StatusTypeDef status = HAL_OK;
-  
-  status = HAL_I2C_Mem_Read( &I2C_EXPBD_Handle, Addr, ( uint16_t )Reg, I2C_MEMADD_SIZE_8BIT, pBuffer, Size, I2C_EXPBD_Timeout );
+	
+	spi_tx_buffer[0] = Reg | (1 << 7);
+	 
+	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_RESET);
+	//status = HAL_SPI_TransmitReceive(&SpiHandle, spi_tx_buffer, pBuffer, Size + 1, I2C_EXPBD_Timeout);
+	
+	
+	for (int i = 0; i < Size + 1 && (i < RX_TX_BUFFER_SIZE); ++i)
+	{
+		while(!(SpiHandle.Instance->SR & SPI_FLAG_TXE));
+		SpiHandle.Instance->DR = spi_tx_buffer[i];
+		spi_rx_buffer[i] = SpiHandle.Instance->DR;
+	}
+	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_SET);
+	
+	return status;
                              
   /* Check the communication status */
   if( status != HAL_OK )
@@ -373,44 +362,41 @@ static void I2C_EXPBD_Error( uint8_t Addr )
 
 static void I2C_EXPBD_MspInit( void )
 {
-  GPIO_InitTypeDef  GPIO_InitStruct;
+	
+		GPIO_InitTypeDef GPIO_InitStruct;
+	
+	__GPIOA_CLK_ENABLE();
+	__GPIOB_CLK_ENABLE();
+	
+	
+	//SPI Pin Init
+	GPIO_InitStruct.Pin = GPIO_PIN_15 | GPIO_PIN_14 |GPIO_PIN_13;
+  GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
+	GPIO_InitStruct.Alternate = GPIO_AF0_SPI2;
+	
+	// SPI CS
+	HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);	
+	
+	GPIO_InitStruct.Pin = GPIO_PIN_8;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
+	HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);	
   
-  /* Enable I2C GPIO clocks */
-  NUCLEO_I2C_EXPBD_SCL_SDA_GPIO_CLK_ENABLE();
-  
-  /* I2C_EXPBD SCL and SDA pins configuration -------------------------------------*/
-  GPIO_InitStruct.Pin        = NUCLEO_I2C_EXPBD_SCL_PIN | NUCLEO_I2C_EXPBD_SDA_PIN;
-  GPIO_InitStruct.Mode       = GPIO_MODE_AF_OD;
-#if ((defined (USE_STM32F4XX_NUCLEO)) || (defined (USE_STM32L0XX_NUCLEO)) || (defined (USE_STM32L4XX_NUCLEO)))
-  GPIO_InitStruct.Speed = GPIO_SPEED_FAST;
-#endif
-  
-#if (defined (USE_STM32L1XX_NUCLEO))
-  GPIO_InitStruct.Speed = GPIO_SPEED_MEDIUM;
-#endif
-  GPIO_InitStruct.Pull       = GPIO_NOPULL;
-  GPIO_InitStruct.Alternate  = NUCLEO_I2C_EXPBD_SCL_SDA_AF;
-  
-  HAL_GPIO_Init( NUCLEO_I2C_EXPBD_SCL_SDA_GPIO_PORT, &GPIO_InitStruct );
-  
-  /* Enable the I2C_EXPBD peripheral clock */
-  NUCLEO_I2C_EXPBD_CLK_ENABLE();
+  /* Enable the SPI2 peripheral clock */
+  __SPI2_CLK_ENABLE();
   
   /* Force the I2C peripheral clock reset */
-  NUCLEO_I2C_EXPBD_FORCE_RESET();
+  NUCLEO_SPI_FORCE_RESET();
   
   /* Release the I2C peripheral clock reset */
-  NUCLEO_I2C_EXPBD_RELEASE_RESET();
+  NUCLEO_SPI_RELEASE_RESET();
   
   /* Enable and set I2C_EXPBD Interrupt to the highest priority */
-  HAL_NVIC_SetPriority(NUCLEO_I2C_EXPBD_EV_IRQn, 0, 0);
-  HAL_NVIC_EnableIRQ(NUCLEO_I2C_EXPBD_EV_IRQn);
-  
-#if ((defined (USE_STM32F4XX_NUCLEO)) || (defined (USE_STM32L1XX_NUCLEO)) || (defined (USE_STM32L4XX_NUCLEO)))
-  /* Enable and set I2C_EXPBD Interrupt to the highest priority */
-  HAL_NVIC_SetPriority(NUCLEO_I2C_EXPBD_ER_IRQn, 0, 0);
-  HAL_NVIC_EnableIRQ(NUCLEO_I2C_EXPBD_ER_IRQn);
-#endif
+  HAL_NVIC_SetPriority(SPI2_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(SPI2_IRQn);
   
 }
 

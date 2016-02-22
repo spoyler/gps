@@ -3,3 +3,10 @@
 /Projects/gps/MDK-ARM/STM32L053R8-Nucleo/STM32L053R8_NUCLEO/*.crf
 *.d
 /Projects/gps/MDK-ARM/STM32L053R8-Nucleo/STM32L053R8_NUCLEO/*.map
+*.crf
+*.hex
+*.htm
+*.axf
+*.iex
+*.lnp
+*.lst

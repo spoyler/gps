@@ -61,7 +61,7 @@ extern "C" {
 #endif /* USE_STM32L4XX_NUCLEO */
 
 /* I2C peripheral configuration defines */
-#define NUCLEO_I2C_EXPBD                            I2C1
+
 #define NUCLEO_I2C_EXPBD_CLK_ENABLE()               __I2C1_CLK_ENABLE()
 #define NUCLEO_I2C_EXPBD_SCL_SDA_GPIO_CLK_ENABLE()  __GPIOB_CLK_ENABLE()
 #define NUCLEO_I2C_EXPBD_SCL_SDA_AF                 GPIO_AF4_I2C1
@@ -69,18 +69,11 @@ extern "C" {
 #define NUCLEO_I2C_EXPBD_SCL_PIN                    GPIO_PIN_8
 #define NUCLEO_I2C_EXPBD_SDA_PIN                    GPIO_PIN_9
 
-#define NUCLEO_I2C_EXPBD_FORCE_RESET()              __I2C1_FORCE_RESET()
-#define NUCLEO_I2C_EXPBD_RELEASE_RESET()            __I2C1_RELEASE_RESET()
+#define NUCLEO_SPI_FORCE_RESET()              __SPI2_FORCE_RESET()
+#define NUCLEO_SPI_RELEASE_RESET()            __SPI2_RELEASE_RESET()
 
-/* I2C interrupt requests */
-#if ((defined (USE_STM32F4XX_NUCLEO)) || (defined (USE_STM32L1XX_NUCLEO)) || (defined (USE_STM32L4XX_NUCLEO)))
-#define NUCLEO_I2C_EXPBD_EV_IRQn                    I2C1_EV_IRQn
-#define NUCLEO_I2C_EXPBD_ER_IRQn                    I2C1_ER_IRQn
-#endif
 
-#if (defined (USE_STM32L0XX_NUCLEO))
-#define NUCLEO_I2C_EXPBD_EV_IRQn                    I2C1_IRQn
-#endif
+
 
 // ready for use
 #define M_INT1_GPIO_PORT           GPIOA

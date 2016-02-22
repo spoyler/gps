@@ -15,7 +15,6 @@
   */
 
 /* Includes ------------------------------------------------------------------*/
-#include <stdio.h>
 #include "main.h"
 #include "sim900.h"
 #include <GPRS_Shield_Arduino.h>
@@ -66,6 +65,13 @@ int gps_message_recived = 0;
 
 char data[512];
 
+static volatile uint8_t mems_int1_detected       = 0;
+static volatile uint8_t send_orientation_request = 0;
+
+
+void sendOrientation( void );
+
+
 /**
   * @brief  Main program
   * @param  None
@@ -113,14 +119,39 @@ int main(void)
 	__HAL_UNLOCK(&UartGPS); 
 	HAL_NVIC_EnableIRQ(USART1_IRQn);
 		
+	InitDebugUart();
 	DEBUG_PRINTF("\r\n\r\n\r\nSystem startup!\r\n");
 
 	// Init GSM
-	gsm(&UartGSM);//RX,TX,PWR,BaudRate
+	//gsm(&UartGSM);//RX,TX,PWR,BaudRate
 	
 	BSP_ACCELERO_Init( LSM6DS3_X_0, &LSM6DS3_X_0_handle );
+	BSP_ACCELERO_Sensor_Enable( LSM6DS3_X_0_handle );
+	
+	BSP_ACCELERO_Enable_6D_Orientation_Ext( LSM6DS3_X_0_handle );
 	
   /* Infinite loop */
+	
+	uint8_t  status = 0;
+	while (1)
+  {
+  
+    if ( mems_int1_detected != 0 )
+    {
+      if ( BSP_ACCELERO_Get_6D_Orientation_Status_Ext( LSM6DS3_X_0_handle, &status ) == COMPONENT_OK )
+      {
+        if ( status != 0 )
+        {
+          sendOrientation();
+        }
+      }
+      mems_int1_detected = 0;
+    }
+  }
+	
+	
+	
+	
 	int count = 0;
   while(1)
   {			
@@ -149,6 +180,130 @@ int main(void)
 		}
   }
 }
+
+void HAL_GPIO_EXTI_Callback( uint16_t GPIO_Pin )
+{
+	if ( GPIO_Pin == M_INT1_PIN )
+  {
+    mems_int1_detected = 1;
+  }
+}
+
+
+/**
+ * @brief  Send actual 6D orientation to UART
+ * @param  None
+ * @retval None
+ */
+
+extern UART_HandleTypeDef LUart;				// debug uart
+void sendOrientation( void )
+{
+
+  uint8_t xl = 0;
+  uint8_t xh = 0;
+  uint8_t yl = 0;
+  uint8_t yh = 0;
+  uint8_t zl = 0;
+  uint8_t zh = 0;
+  uint8_t instance;
+  
+  BSP_ACCELERO_Get_Instance( LSM6DS3_X_0_handle, &instance );
+  
+  if ( BSP_ACCELERO_Get_6D_Orientation_XL_Ext( LSM6DS3_X_0_handle, &xl ) == COMPONENT_ERROR )
+  {
+    sprintf( data, "Error getting 6D orientation XL axis from LSM6DS3 - accelerometer[%d].\n", instance );
+  }
+  if ( BSP_ACCELERO_Get_6D_Orientation_XH_Ext( LSM6DS3_X_0_handle, &xh ) == COMPONENT_ERROR )
+  {
+    sprintf( data, "Error getting 6D orientation XH axis from LSM6DS3 - accelerometer[%d].\n", instance );
+  }
+  if ( BSP_ACCELERO_Get_6D_Orientation_YL_Ext( LSM6DS3_X_0_handle, &yl ) == COMPONENT_ERROR )
+  {
+    sprintf( data, "Error getting 6D orientation YL axis from LSM6DS3 - accelerometer[%d].\n", instance );
+  }
+  if ( BSP_ACCELERO_Get_6D_Orientation_YH_Ext( LSM6DS3_X_0_handle, &yh ) == COMPONENT_ERROR )
+  {
+    sprintf( data, "Error getting 6D orientation YH axis from LSM6DS3 - accelerometer[%d].\n", instance );
+  }
+  if ( BSP_ACCELERO_Get_6D_Orientation_ZL_Ext( LSM6DS3_X_0_handle, &zl ) == COMPONENT_ERROR )
+  {
+    sprintf( data, "Error getting 6D orientation ZL axis from LSM6DS3 - accelerometer[%d].\n", instance );
+  }
+  if ( BSP_ACCELERO_Get_6D_Orientation_ZH_Ext( LSM6DS3_X_0_handle, &zh ) == COMPONENT_ERROR )
+  {
+    sprintf( data, "Error getting 6D orientation ZH axis from LSM6DS3 - accelerometer[%d].\n", instance );
+  }
+  
+  if ( xl == 0 && yl == 0 && zl == 0 && xh == 0 && yh == 1 && zh == 0 )
+  {
+    sprintf( data, 		"\n  ________________  " \
+                      "\n |                | " \
+                      "\n |  *             | " \
+                      "\n |                | " \
+                      "\n |                | " \
+                      "\n |                | " \
+                      "\n |                | " \
+                      "\n |________________| \n" );
+  }
+  
+  else if ( xl == 1 && yl == 0 && zl == 0 && xh == 0 && yh == 0 && zh == 0 )
+  {
+    sprintf( data, 		"\n  ________________  " \
+                      "\n |                | " \
+                      "\n |             *  | " \
+                      "\n |                | " \
+                      "\n |                | " \
+                      "\n |                | " \
+                      "\n |                | " \
+                      "\n |________________| \n" );
+  }
+  
+  else if ( xl == 0 && yl == 0 && zl == 0 && xh == 1 && yh == 0 && zh == 0 )
+  {
+    sprintf( data,		"\n  ________________  " \
+                      "\n |                | " \
+                      "\n |                | " \
+                      "\n |                | " \
+                      "\n |                | " \
+                      "\n |                | " \
+                      "\n |  *             | " \
+                      "\n |________________| \n" );
+  }
+  
+  else if ( xl == 0 && yl == 1 && zl == 0 && xh == 0 && yh == 0 && zh == 0 )
+  {
+    sprintf( data, 		"\n  ________________  " \
+                      "\n |                | " \
+                      "\n |                | " \
+                      "\n |                | " \
+                      "\n |                | " \
+                      "\n |                | " \
+                      "\n |             *  | " \
+                      "\n |________________| \n" );
+  }
+  
+  else if ( xl == 0 && yl == 0 && zl == 0 && xh == 0 && yh == 0 && zh == 1 )
+  {
+    sprintf( data, "\n  __*_____________  " \
+                   "\n |________________| \n" );
+  }
+  
+  else if ( xl == 0 && yl == 0 && zl == 1 && xh == 0 && yh == 0 && zh == 0 )
+  {
+    sprintf( data, "\n  ________________  " \
+                   "\n |________________| " \
+                   "\n    *               \n" );
+  }
+  
+  else
+  {
+    sprintf( data, "None of the 6D orientation axes is set in LSM6DS3 - accelerometer[%d].\n", instance );
+  }
+  
+  HAL_UART_Transmit( &LUart, ( uint8_t* )data, strlen( data ), 5000 );
+}
+
 
 void USART1_IRQHandler(void)
 {
@@ -263,32 +418,6 @@ void GPIO_Init(void)
 	
 	HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);	
 
-	//SPI Pin Init
-	GPIO_InitStruct.Pin = GPIO_PIN_15 | GPIO_PIN_14 |GPIO_PIN_13;
-  GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
-	GPIO_InitStruct.Alternate = GPIO_AF0_SPI2;
-	
-	// SPI CS
-	HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);	
-	
-	GPIO_InitStruct.Pin = GPIO_PIN_8;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
-	HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);	
-	
-	 /* Configure GPIO PINs to detect Interrupts */
-  GPIO_InitStruct.Pin = GPIO_PIN_10 | GPIO_PIN_9;
-  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FAST;
-  GPIO_InitStruct.Pull  = GPIO_NOPULL;
-  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
-  
-  /* Enable and set EXTI Interrupt priority */
-  HAL_NVIC_SetPriority(EXTI4_15_IRQn, 0x00, 0x00);
-  HAL_NVIC_EnableIRQ(EXTI4_15_IRQn);
 }
 
 /**
