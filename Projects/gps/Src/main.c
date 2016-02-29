@@ -15,10 +15,13 @@
   */
 
 /* Includes ------------------------------------------------------------------*/
+#include <stdio.h>
 #include "main.h"
 #include "sim900.h"
 #include <GPRS_Shield_Arduino.h>
 #include "debug.h"
+#include "rtc.h"
+#include "gps.h"
 
 
 /** @defgroup IHM04A1_Example_for_4_Unidirectionnal_motors
@@ -54,14 +57,9 @@ const char vtag[] = "$VTAG,001";
 	
 uint8_t rx_buffer[RX_BUFFER_SIZE];
 UART_HandleTypeDef UartGSM;			// gsm uart
-UART_HandleTypeDef UartGPS;			// gps uart
 static void *LSM6DS3_X_0_handle = NULL;
 
 
-char gps_message[256];
-char gps_tmp_string[256];
-int gps_message_index = 0;
-int gps_message_recived = 0;
 
 char data[512];
 
@@ -94,45 +92,35 @@ int main(void)
   
 	GPIO_Init();
 				
-	__USART1_CLK_ENABLE();
-  UartGPS.Instance        = USART1;
-
-  UartGPS.Init.BaudRate   = 9600;
-  UartGPS.Init.WordLength = UART_WORDLENGTH_8B;
-  UartGPS.Init.StopBits   = UART_STOPBITS_1;
-  UartGPS.Init.Parity     = UART_PARITY_NONE;
-  UartGPS.Init.HwFlowCtl  = UART_HWCONTROL_NONE;
-  UartGPS.Init.Mode       = UART_MODE_TX_RX;
-  UartGPS.AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_NO_INIT;
-  if(HAL_UART_DeInit(&UartGPS) != HAL_OK)
-  {
-    Error_Handler(0);
-  }  
-  if(HAL_UART_Init(&UartGPS) != HAL_OK)
-  {
-    Error_Handler(0);
-  }
-	
-		__HAL_UART_ENABLE_IT(&UartGPS, UART_IT_ORE | UART_IT_RXNE);
-	
-	/* Process Unlocked */
-	__HAL_UNLOCK(&UartGPS); 
-	HAL_NVIC_EnableIRQ(USART1_IRQn);
 		
 	InitDebugUart();
 	DEBUG_PRINTF("\r\n\r\n\r\nSystem startup!\r\n");
+	
+	RTC_Init();
+	
+	
+	GPS_Init();
 
 	// Init GSM
 	//gsm(&UartGSM);//RX,TX,PWR,BaudRate
 	
-	BSP_ACCELERO_Init( LSM6DS3_X_0, &LSM6DS3_X_0_handle );
-	BSP_ACCELERO_Sensor_Enable( LSM6DS3_X_0_handle );
+//	BSP_ACCELERO_Init( LSM6DS3_X_0, &LSM6DS3_X_0_handle );
+//	BSP_ACCELERO_Sensor_Enable( LSM6DS3_X_0_handle );
 	
-	BSP_ACCELERO_Enable_6D_Orientation_Ext( LSM6DS3_X_0_handle );
+//	BSP_ACCELERO_Enable_6D_Orientation_Ext( LSM6DS3_X_0_handle );
 	
   /* Infinite loop */
 	
 	uint8_t  status = 0;
+	
+	char * ptr_gps_msg = 0;
+	
+	while(1)
+	{
+//		RTC_CalendarShow();
+//		HAL_Delay(10000);
+//	}
+	/*
 	while (1)
   {
   
@@ -148,36 +136,41 @@ int main(void)
       mems_int1_detected = 0;
     }
   }
-	
-	
-	
-	
-	int count = 0;
-  while(1)
-  {			
-		if (gps_message_recived)
+*/		
+/*		if (!is_connected())
 		{
-			if (!is_connected())
+			DEBUG_PRINTF("Connecting to %s:%d... ", host_name, host_port);
+			if (connect(TCP,host_name, host_port, 2, 100))
 			{
-				DEBUG_PRINTF("Connecting to %s:%d... ", host_name, host_port);
-				if (connect(TCP,host_name, host_port, 2, 100))
-				{
-					DEBUG_PRINTF("Ok\r\n");
-				}
-				else
-				{
-					DEBUG_PRINTF("Error\r\n");
-				}
+				DEBUG_PRINTF("Ok\r\n");
 			}
 			else
-			{									
-				memset(data,0, 512);					
-				sprintf(data, "%s\r\n%s\r\n%s\r\n", vtuin, gps_message, vtag);				
-				send(data, strlen(data));
-				DEBUG_PRINTF("%s", data);
-				gps_message_recived = 0;			
+			{
+				DEBUG_PRINTF("Error\r\n");
 			}
 		}
+		else*/
+		{
+			ptr_gps_msg = (char *)Get_GPS_Message(GGA);
+			
+			if (ptr_gps_msg != nullptr)
+			{
+				memset(data,0, 512);					
+				//sprintf(data, "%s\r\n%s\r\n%s\r\n", vtuin, gps_message, vtag);				
+				sprintf(data, "%s\r\n", ptr_gps_msg);				
+				//send(data, strlen(data));
+				DEBUG_PRINTF("%s", data);
+			}
+		}
+		
+		// time synchro
+		ptr_gps_msg = (char *)Get_GPS_Message(ZDA);
+		if (ptr_gps_msg != nullptr)
+		{
+			RTC_CalendarSet(ptr_gps_msg);
+		}
+		
+		
   }
 }
 
@@ -305,55 +298,7 @@ void sendOrientation( void )
 }
 
 
-void USART1_IRQHandler(void)
-{
-	
-	// check errors
-	if(__HAL_UART_GET_IT(&UartGPS, UART_IT_ORE) != RESET) 
-  { 
-    __HAL_UART_CLEAR_IT(&UartGPS, UART_CLEAR_OREF);
-    
-    UartGPS.ErrorCode |= HAL_UART_ERROR_ORE;
-    /* Set the UART state ready to be able to start again the process */
-    UartGPS.State = HAL_UART_STATE_READY;
-		
-		return;
-  }
-	
-	// check data
-	if(HAL_IS_BIT_SET(UartGPS.Instance->ISR, UART_FLAG_RXNE))
-	{
-		char c = UartGPS.Instance->RDR;
-		
-		if (c == '$')
-		{
-			gps_message_index = 0;
-		}
-		
-		gps_tmp_string[gps_message_index] = c;
-				
-		if (gps_message_index > 0)
-		{
-			if (   gps_tmp_string[gps_message_index - 1] 	== '\r'
-					&& gps_tmp_string[gps_message_index] 			== '\n')
-			{
-				if (/*(strstr(gps_tmp_string, "GGA") != 0)
-					&&*/ !gps_message_recived )
-				{
-					memset(gps_message, 0, 256);
-					memcpy(gps_message, gps_tmp_string, gps_message_index - 1);
-					memset(gps_tmp_string, 0, 256);
-					gps_message_recived = 1;
-				}
-				memset(gps_tmp_string, 0, 256);
-				gps_message_index = 0;
-			}
-		}		
-		++gps_message_index;
-		
-		return;
-	}
-}
+
 
 
 void USART2_IRQHandler(void)
