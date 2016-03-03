@@ -47,7 +47,6 @@ extern "C" {
 
 /* Includes ------------------------------------------------------------------*/
 
-#include "LSM6DS0_ACC_GYRO_driver_HL.h"
 #include "LSM6DS3_ACC_GYRO_driver_HL.h"
 #include "x_nucleo_iks01a1.h"
 

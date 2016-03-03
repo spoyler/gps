@@ -6,7 +6,6 @@
 /* Includes ------------------------------------------------------------------*/
 #include <stdio.h>
 #include "debug.h"
-#include "stm32l0xx_hal.h"
 
 #define PUTCHAR_PROTOTYPE int fputc(int ch, FILE *f)
 
@@ -37,4 +36,16 @@ PUTCHAR_PROTOTYPE
 	while(HAL_IS_BIT_CLR(LUart.Instance->ISR, UART_FLAG_TXE));
 	LUart.Instance->TDR = ch;
   return ch;
+}
+
+
+void debug_simm800(UART_HandleTypeDef * gsm_uart)
+{
+	while(1)
+	{
+		if (gsm_uart->Instance->ISR & UART_FLAG_RXNE)
+			LUart.Instance->TDR = gsm_uart->Instance->RDR;
+		if (LUart.Instance->ISR & UART_FLAG_RXNE)
+			gsm_uart->Instance->TDR = LUart.Instance->RDR;
+	}
 }

@@ -11,3 +11,5 @@
 *.lnp
 *.lst
 *.map
+*.TMP
+*.bak

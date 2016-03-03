@@ -100,22 +100,7 @@ int main(void)
 	BSP_ACCELERO_Enable_6D_Orientation_Ext( LSM6DS3_X_0_handle );
 	
   /* Infinite loop */
-	
-	while(1)
-	{
-		LSM6DS3_ACC_GYRO_R_WHO_AM_I(LSM6DS3_X_0_handle, data);
-		DEBUG_PRINTF("SPI_RX = ");
-		for (int i = 0; i < 2; ++i)
-		{
-			DEBUG_PRINTF("[%d] = 0x%x ", i, data[i]);
-		}		
-		DEBUG_PRINTF("\r\n");
-		//HAL_Delay(3000);
-	}
-	
-	
-	
-	
+
 	uint8_t  status = 0;
 	while (1)
   {
@@ -190,63 +175,63 @@ void sendOrientation( void )
   
   if ( xl == 0 && yl == 0 && zl == 0 && xh == 0 && yh == 1 && zh == 0 )
   {
-    sprintf( data, 		"\n  ________________  " \
-                      "\n |                | " \
-                      "\n |  *             | " \
-                      "\n |                | " \
-                      "\n |                | " \
-                      "\n |                | " \
-                      "\n |                | " \
-                      "\n |________________| \n" );
+    sprintf( data, 		"\r\n  ________________  " \
+                      "\r\n |                | " \
+                      "\r\n |  *             | " \
+                      "\r\n |                | " \
+                      "\r\n |                | " \
+                      "\r\n |                | " \
+                      "\r\n |                | " \
+                      "\r\n |________________| \r\n" );
   }
   
   else if ( xl == 1 && yl == 0 && zl == 0 && xh == 0 && yh == 0 && zh == 0 )
   {
-    sprintf( data, 		"\n  ________________  " \
-                      "\n |                | " \
-                      "\n |             *  | " \
-                      "\n |                | " \
-                      "\n |                | " \
-                      "\n |                | " \
-                      "\n |                | " \
-                      "\n |________________| \n" );
+    sprintf( data, 		"\r\n  ________________  " \
+                      "\r\n |                | " \
+                      "\r\n |             *  | " \
+                      "\r\n |                | " \
+                      "\r\n |                | " \
+                      "\r\n |                | " \
+                      "\r\n |                | " \
+                      "\r\n |________________| \r\n" );
   }
   
   else if ( xl == 0 && yl == 0 && zl == 0 && xh == 1 && yh == 0 && zh == 0 )
   {
-    sprintf( data,		"\n  ________________  " \
-                      "\n |                | " \
-                      "\n |                | " \
-                      "\n |                | " \
-                      "\n |                | " \
-                      "\n |                | " \
-                      "\n |  *             | " \
-                      "\n |________________| \n" );
+    sprintf( data,		"\r\n  ________________  " \
+                      "\r\n |                | " \
+                      "\r\n |                | " \
+                      "\r\n |                | " \
+                      "\r\n |                | " \
+                      "\r\n |                | " \
+                      "\r\n |  *             | " \
+                      "\r\n |________________| \r\n" );
   }
   
   else if ( xl == 0 && yl == 1 && zl == 0 && xh == 0 && yh == 0 && zh == 0 )
   {
-    sprintf( data, 		"\n  ________________  " \
-                      "\n |                | " \
-                      "\n |                | " \
-                      "\n |                | " \
-                      "\n |                | " \
-                      "\n |                | " \
-                      "\n |             *  | " \
-                      "\n |________________| \n" );
+    sprintf( data, 		"\r\n  ________________  " \
+                      "\r\n |                | " \
+                      "\r\n |                | " \
+                      "\r\n |                | " \
+                      "\r\n |                | " \
+                      "\r\n |                | " \
+                      "\r\n |             *  | " \
+                      "\r\n |________________| \r\n" );
   }
   
   else if ( xl == 0 && yl == 0 && zl == 0 && xh == 0 && yh == 0 && zh == 1 )
   {
-    sprintf( data, "\n  __*_____________  " \
-                   "\n |________________| \n" );
+    sprintf( data, "\r\n  __*_____________  " \
+                   "\r\n |________________| \r\n" );
   }
   
   else if ( xl == 0 && yl == 0 && zl == 1 && xh == 0 && yh == 0 && zh == 0 )
   {
-    sprintf( data, "\n  ________________  " \
-                   "\n |________________| " \
-                   "\n    *               \n" );
+    sprintf( data, "\r\n  ________________  " \
+                   "\r\n |________________| " \
+                   "\r\n    *               \r\n" );
   }
   
   else

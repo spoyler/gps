@@ -604,21 +604,6 @@
           </Files>
         </Group>
         <Group>
-          <GroupName>lsm6ds0</GroupName>
-          <Files>
-            <File>
-              <FileName>LSM6DS0_ACC_GYRO_driver.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\..\Src\lsm6ds0\LSM6DS0_ACC_GYRO_driver.c</FilePath>
-            </File>
-            <File>
-              <FileName>LSM6DS0_ACC_GYRO_driver_HL.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\..\Src\lsm6ds0\LSM6DS0_ACC_GYRO_driver_HL.c</FilePath>
-            </File>
-          </Files>
-        </Group>
-        <Group>
           <GroupName>lsm6ds3</GroupName>
           <Files>
             <File>

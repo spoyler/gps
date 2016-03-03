@@ -34,17 +34,16 @@
 #include "GPRS_Shield_Arduino.h"
 #include "debug.h"
 
+#define RX_BUFFER_SIZE 256	
+uint32_t rx_buffer[RX_BUFFER_SIZE];
+
 uint32_t str_to_ip(const char* str);
-// SoftwareSerial gprsSerial;
-//static GPRS* inst;
 uint32_t _ip;
 char ip_string[16]; //XXX.YYY.ZZZ.WWW + \0
 		
 extern UART_HandleTypeDef * uart;		
 
 const char resp_ok[] = "OK\r\n";
-
-
 
 void delay(int time)
 {
@@ -172,9 +171,15 @@ bool checkSIMStatus(void)
         count++;
         delay(300);
     }
-    if(count == 3) {
-        return false;
+    if(count == 3) 
+		{
+			memset(rx_buffer, 0, RX_BUFFER_SIZE);
+			getSignalStrength(rx_buffer);
+		
+			DEBUG_PRINTF("%s\r\n", rx_buffer);
+			return false;
     }
+		
     return true;
 }
 
@@ -672,14 +677,12 @@ int send(const char * str, int len)
 	const uint32_t wait_data_ok = 5000;
   char cmd[64] = 0;
 	char num[16];
-    if(len > 0){
-    //snprintf(cmd,sizeof(cmd),"AT+CIPSEND=%d\r\n",len);
-		sprintf(cmd,"AT+CIPSEND=%d\r\n",len);
-		//sim900_send_cmd("AT+CIPSEND=", sizeof("AT+CIPSEND="));
-		//itoa(len, num);
-		//sim900_send_cmd(cmd, 0);
-		if(sim900_check_with_cmd(cmd,">",CMD)) {
-        //sim900_send_cmd(">", 0);
+    if(len > 0)
+		{
+			sprintf(cmd,"AT+CIPSEND=%d\r\n",len);
+
+		if(sim900_check_with_cmd(cmd,">",CMD)) 
+		{
 				sim900_flush_serial();
         sim900_send_cmd(str, len);
 				uint32_t tick = HAL_GetTick();

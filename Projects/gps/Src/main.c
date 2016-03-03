@@ -30,7 +30,7 @@
 
 /* Private typedef -----------------------------------------------------------*/
 /* Private define ------------------------------------------------------------*/
-#define RX_BUFFER_SIZE 256
+
 
 /* Private macro -------------------------------------------------------------*/
 /* Private variables ---------------------------------------------------------*/
@@ -54,8 +54,8 @@ const int host_port = 10123;
 
 const char vtuin[] = "$VTUIN,001";
 const char vtag[] = "$VTAG,001";
-	
-uint8_t rx_buffer[RX_BUFFER_SIZE];
+
+
 UART_HandleTypeDef UartGSM;			// gsm uart
 static void *LSM6DS3_X_0_handle = NULL;
 
@@ -63,8 +63,8 @@ static void *LSM6DS3_X_0_handle = NULL;
 
 char data[512];
 
-static volatile uint8_t mems_int1_detected       = 0;
-static volatile uint8_t send_orientation_request = 0;
+volatile uint8_t mems_int1_detected = 0;
+volatile uint8_t mems_int2_detected = 0;
 
 
 void sendOrientation( void );
@@ -102,25 +102,27 @@ int main(void)
 	GPS_Init();
 
 	// Init GSM
-	//gsm(&UartGSM);//RX,TX,PWR,BaudRate
+	gsm(&UartGSM);//RX,TX,PWR,BaudRate
 	
-//	BSP_ACCELERO_Init( LSM6DS3_X_0, &LSM6DS3_X_0_handle );
-//	BSP_ACCELERO_Sensor_Enable( LSM6DS3_X_0_handle );
+	//debug_simm800(&UartGSM);
+/*	
+	BSP_ACCELERO_Init( LSM6DS3_X_0, &LSM6DS3_X_0_handle );
+	BSP_ACCELERO_Sensor_Enable( LSM6DS3_X_0_handle );
 	
-//	BSP_ACCELERO_Enable_6D_Orientation_Ext( LSM6DS3_X_0_handle );
-	
+	BSP_ACCELERO_Enable_6D_Orientation_Ext( LSM6DS3_X_0_handle );
+	BSP_ACCELERO_Enable_Free_Fall_Detection_Ext( LSM6DS3_X_0_handle );
+*/	
   /* Infinite loop */
 	
 	uint8_t  status = 0;
 	
 	char * ptr_gps_msg = 0;
 	
-	while(1)
+/*	while(1)
 	{
-//		RTC_CalendarShow();
-//		HAL_Delay(10000);
-//	}
-	/*
+		RTC_CalendarShow();
+		HAL_Delay(10000);
+	}
 	while (1)
   {
   
@@ -135,9 +137,24 @@ int main(void)
       }
       mems_int1_detected = 0;
     }
+		
+		if ( mems_int2_detected != 0 )
+    {
+      if ( BSP_ACCELERO_Get_Free_Fall_Detection_Status_Ext( LSM6DS3_X_0_handle, &status ) == COMPONENT_OK )
+      {
+        if ( status != 0 )
+        {
+					DEBUG_PRINTF("Babah!!!!\r\n");
+        }
+      }
+      mems_int2_detected = 0;
+    }
+
   }
-*/		
-/*		if (!is_connected())
+*/
+	while(1)
+	{
+		if (!is_connected())
 		{
 			DEBUG_PRINTF("Connecting to %s:%d... ", host_name, host_port);
 			if (connect(TCP,host_name, host_port, 2, 100))
@@ -149,16 +166,16 @@ int main(void)
 				DEBUG_PRINTF("Error\r\n");
 			}
 		}
-		else*/
+		else
 		{
 			ptr_gps_msg = (char *)Get_GPS_Message(GGA);
 			
 			if (ptr_gps_msg != nullptr)
 			{
 				memset(data,0, 512);					
-				//sprintf(data, "%s\r\n%s\r\n%s\r\n", vtuin, gps_message, vtag);				
-				sprintf(data, "%s\r\n", ptr_gps_msg);				
-				//send(data, strlen(data));
+				sprintf(data, "%s\r\n%s\r\n%s\r\n", vtuin, ptr_gps_msg, vtag);				
+				//sprintf(data, "%s\r\n", ptr_gps_msg);				
+				send(data, strlen(data));
 				DEBUG_PRINTF("%s", data);
 			}
 		}
@@ -168,9 +185,7 @@ int main(void)
 		if (ptr_gps_msg != nullptr)
 		{
 			RTC_CalendarSet(ptr_gps_msg);
-		}
-		
-		
+		}		
   }
 }
 
@@ -180,6 +195,11 @@ void HAL_GPIO_EXTI_Callback( uint16_t GPIO_Pin )
   {
     mems_int1_detected = 1;
   }
+	else
+		if (GPIO_Pin == M_INT2_PIN)
+		{
+			mems_int2_detected = 1;
+		}
 }
 
 
@@ -230,63 +250,63 @@ void sendOrientation( void )
   
   if ( xl == 0 && yl == 0 && zl == 0 && xh == 0 && yh == 1 && zh == 0 )
   {
-    sprintf( data, 		"\n  ________________  " \
-                      "\n |                | " \
-                      "\n |  *             | " \
-                      "\n |                | " \
-                      "\n |                | " \
-                      "\n |                | " \
-                      "\n |                | " \
-                      "\n |________________| \n" );
+    sprintf( data, 		"\r\n  ________________  " \
+                      "\r\n |                | " \
+                      "\r\n |  *             | " \
+                      "\r\n |                | " \
+                      "\r\n |                | " \
+                      "\r\n |                | " \
+                      "\r\n |                | " \
+                      "\r\n |________________| \r\n" );
   }
   
   else if ( xl == 1 && yl == 0 && zl == 0 && xh == 0 && yh == 0 && zh == 0 )
   {
-    sprintf( data, 		"\n  ________________  " \
-                      "\n |                | " \
-                      "\n |             *  | " \
-                      "\n |                | " \
-                      "\n |                | " \
-                      "\n |                | " \
-                      "\n |                | " \
-                      "\n |________________| \n" );
+   sprintf( data, 		"\r\n  ________________  " \
+                      "\r\n |                | " \
+                      "\r\n |             *  | " \
+                      "\r\n |                | " \
+                      "\r\n |                | " \
+                      "\r\n |                | " \
+                      "\r\n |                | " \
+                      "\r\n |________________| \r\n" );
   }
   
   else if ( xl == 0 && yl == 0 && zl == 0 && xh == 1 && yh == 0 && zh == 0 )
   {
-    sprintf( data,		"\n  ________________  " \
-                      "\n |                | " \
-                      "\n |                | " \
-                      "\n |                | " \
-                      "\n |                | " \
-                      "\n |                | " \
-                      "\n |  *             | " \
-                      "\n |________________| \n" );
+   sprintf( data,		"\r\n  ________________  " \
+                      "\r\n |                | " \
+                      "\r\n |                | " \
+                      "\r\n |                | " \
+                      "\r\n |                | " \
+                      "\r\n |                | " \
+                      "\r\n |  *             | " \
+                      "\r\n |________________| \r\n" );
   }
   
   else if ( xl == 0 && yl == 1 && zl == 0 && xh == 0 && yh == 0 && zh == 0 )
   {
-    sprintf( data, 		"\n  ________________  " \
-                      "\n |                | " \
-                      "\n |                | " \
-                      "\n |                | " \
-                      "\n |                | " \
-                      "\n |                | " \
-                      "\n |             *  | " \
-                      "\n |________________| \n" );
+    sprintf( data, 		"\r\n  ________________  " \
+                      "\r\n |                | " \
+                      "\r\n |                | " \
+                      "\r\n |                | " \
+                      "\r\n |                | " \
+                      "\r\n |                | " \
+                      "\r\n |             *  | " \
+                      "\r\n |________________| \r\n" );
   }
   
   else if ( xl == 0 && yl == 0 && zl == 0 && xh == 0 && yh == 0 && zh == 1 )
   {
-    sprintf( data, "\n  __*_____________  " \
-                   "\n |________________| \n" );
+    sprintf( data, "\r\n  __*_____________  " \
+                   "\r\n |________________| \r\n" );
   }
   
   else if ( xl == 0 && yl == 0 && zl == 1 && xh == 0 && yh == 0 && zh == 0 )
   {
-    sprintf( data, "\n  ________________  " \
-                   "\n |________________| " \
-                   "\n    *               \n" );
+    sprintf( data, "\r\n  ________________  " \
+                   "\r\n |________________| " \
+                   "\r\n    *               \r\n" );
   }
   
   else

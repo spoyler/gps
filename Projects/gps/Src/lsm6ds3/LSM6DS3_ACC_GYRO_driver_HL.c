@@ -1958,7 +1958,7 @@ static DrvStatusTypeDef LSM6DS3_X_Enable_Free_Fall_Detection( DrvContextTypeDef 
   }
   
   /* INT1_FF setting */
-  if ( LSM6DS3_ACC_GYRO_W_FFEvOnInt1( (void *)handle, LSM6DS3_ACC_GYRO_INT1_FF_ENABLED ) == MEMS_ERROR )
+  if ( LSM6DS3_ACC_GYRO_W_FFEvOnInt2( (void *)handle, LSM6DS3_ACC_GYRO_INT2_FF_ENABLED ) == MEMS_ERROR )
   {
     return COMPONENT_ERROR;
   }

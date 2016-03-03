@@ -58,7 +58,6 @@
 
 static DrvContextTypeDef GYRO_SensorHandle[ GYRO_SENSORS_MAX_NUM ];
 static GYRO_Data_t GYRO_Data[ GYRO_SENSORS_MAX_NUM ]; // Gyroscope - all.
-static LSM6DS0_G_Data_t LSM6DS0_G_0_Data; // Gyroscope - sensor 0.
 static LSM6DS3_G_Data_t LSM6DS3_G_0_Data; // Gyroscope - sensor 1.
 /**
  * @}
@@ -67,7 +66,6 @@ static LSM6DS3_G_Data_t LSM6DS3_G_0_Data; // Gyroscope - sensor 1.
 /** @addtogroup X_NUCLEO_IKS01A1_GYRO_Private_FunctionPrototypes Private function prototypes
  * @{
  */
-static DrvStatusTypeDef BSP_LSM6DS0_GYRO_Init( void **handle );
 static DrvStatusTypeDef BSP_LSM6DS3_GYRO_Init( void **handle );
 /**
  * @}
@@ -97,8 +95,6 @@ DrvStatusTypeDef BSP_GYRO_Init( GYRO_ID_t id, void **handle )
       /* Try to init the LSM6DS3 first */
       if( BSP_LSM6DS3_GYRO_Init(handle) == COMPONENT_ERROR )
       {
-        /* Try to init the LSM6DS0 if we do not use the LSM6DS3 */
-        if( BSP_LSM6DS0_GYRO_Init(handle) == COMPONENT_ERROR )
         {
           return COMPONENT_ERROR;
         }
@@ -107,7 +103,6 @@ DrvStatusTypeDef BSP_GYRO_Init( GYRO_ID_t id, void **handle )
     }
     case LSM6DS0_G_0:
     {
-      if( BSP_LSM6DS0_GYRO_Init(handle) == COMPONENT_ERROR )
       {
         return COMPONENT_ERROR;
       }
@@ -128,57 +123,7 @@ DrvStatusTypeDef BSP_GYRO_Init( GYRO_ID_t id, void **handle )
 
 
 
-static DrvStatusTypeDef BSP_LSM6DS0_GYRO_Init( void **handle )
-{
-  GYRO_Drv_t *driver = NULL;
-  
-  if(GYRO_SensorHandle[ LSM6DS0_G_0 ].isInitialized == 1)
-  {
-    /* We have reached the max num of instance for this component */
-    return COMPONENT_ERROR;
-  }
-  
-  if ( Sensor_IO_Init() == COMPONENT_ERROR )
-  {
-    return COMPONENT_ERROR;
-  }
-  
-  /* Setup sensor handle. */
-  /* Gyroscope - sensor 0 */
-  GYRO_SensorHandle[ LSM6DS0_G_0 ].who_am_i      = LSM6DS0_ACC_GYRO_WHO_AM_I;
-  GYRO_SensorHandle[ LSM6DS0_G_0 ].address       = LSM6DS0_ACC_GYRO_I2C_ADDRESS_HIGH;
-  GYRO_SensorHandle[ LSM6DS0_G_0 ].instance      = LSM6DS0_G_0;
-  GYRO_SensorHandle[ LSM6DS0_G_0 ].isInitialized = 0;
-  GYRO_SensorHandle[ LSM6DS0_G_0 ].isEnabled     = 0;
-  GYRO_SensorHandle[ LSM6DS0_G_0 ].isCombo       = 1;
-  GYRO_SensorHandle[ LSM6DS0_G_0 ].pData         = ( void * )&GYRO_Data[ LSM6DS0_G_0 ];
-  GYRO_SensorHandle[ LSM6DS0_G_0 ].pVTable       = ( void * )&LSM6DS0_G_Drv;
-  GYRO_SensorHandle[ LSM6DS0_G_0 ].pExtVTable    = 0;
-  
-  LSM6DS0_G_0_Data.comboData = &LSM6DS0_Combo_Data[0];
-  GYRO_Data[ LSM6DS0_G_0 ].pComponentData = ( void * )&LSM6DS0_G_0_Data;
-  GYRO_Data[ LSM6DS0_G_0 ].pExtData       = 0;
-  
-  *handle = (void *)&GYRO_SensorHandle[ LSM6DS0_G_0 ];
-  
-  driver = ( GYRO_Drv_t * )((DrvContextTypeDef *)(*handle))->pVTable;
-  
-  if ( driver->Init == NULL )
-  {
-    memset((*handle), 0, sizeof(DrvContextTypeDef));
-    *handle = NULL;
-    return COMPONENT_ERROR;
-  }
-  
-  if ( driver->Init( (DrvContextTypeDef *)(*handle) ) == COMPONENT_ERROR )
-  {
-    memset((*handle), 0, sizeof(DrvContextTypeDef));
-    *handle = NULL;
-    return COMPONENT_ERROR;
-  }
-  
-  return COMPONENT_OK;
-}
+
 
 static DrvStatusTypeDef BSP_LSM6DS3_GYRO_Init( void **handle )
 {

@@ -306,54 +306,13 @@ static uint8_t SPI_EXPBD_ReadData( uint8_t Addr, uint8_t Reg, uint8_t* pBuffer, 
   HAL_StatusTypeDef status = HAL_OK;
 	
 	spi_tx_buffer[0] = Reg | (1 << 7);
-	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_SET);
 	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_RESET);
-	//status = HAL_SPI_TransmitReceive(&SpiHandle, spi_tx_buffer, pBuffer, Size + 1, SPI_EXPBD_Timeout);
-	
-	while (		(SpiHandle.Instance->SR & SPI_FLAG_OVR)
-					||(SpiHandle.Instance->SR & SPI_FLAG_RXNE))
-	{
-		pBuffer[0] = SpiHandle.Instance->DR;
-	}
-		
-	for (int i = 0; i < Size + 1 && (i < RX_TX_BUFFER_SIZE); ++i)
-	{
-		while(!(SpiHandle.Instance->SR & SPI_FLAG_TXE));
-		SpiHandle.Instance->DR = spi_tx_buffer[i];
-		if (SpiHandle.Instance->SR & SPI_FLAG_RXNE)
-			pBuffer[i] = SpiHandle.Instance->DR;
-	}
-	
-	while((SpiHandle.Instance->SR & SPI_FLAG_BSY))
-	{
-		if (		(SpiHandle.Instance->SR & SPI_FLAG_OVR)
-					||(SpiHandle.Instance->SR & SPI_FLAG_RXNE))
-		{
-			pBuffer[0] = SpiHandle.Instance->DR;
-		}
-	}
+	status = HAL_SPI_TransmitReceive(&SpiHandle, spi_tx_buffer, spi_rx_buffer, Size + 1, SPI_EXPBD_Timeout);	
+	while((SpiHandle.Instance->SR & SPI_FLAG_BSY));
 	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_SET);
 	
-	if ((SpiHandle.Instance->SR & SPI_FLAG_OVR)
-			||(SpiHandle.Instance->SR & SPI_FLAG_RXNE))
-	{
-			pBuffer[0] = SpiHandle.Instance->DR;
-	}
-	
-	return status;
-                             
-  /* Check the communication status */
-  if( status != HAL_OK )
-  {
-  
-    /* Execute user timeout callback */
-    SPI_EXPBD_Error( Addr );
-    return 1;
-  }
-  else
-  {
-    return 0;
-  }
+	memcpy(pBuffer, &spi_rx_buffer[1], Size);	
+	return status;                             
 }
 
 
@@ -395,6 +354,7 @@ static void SPI_EXPBD_MspInit( void )
   GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
+	GPIO_InitStruct.Pull = GPIO_PULLDOWN;
 	GPIO_InitStruct.Alternate = GPIO_AF0_SPI2;
 	
 	// SPI CS
