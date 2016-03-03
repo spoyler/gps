@@ -3230,6 +3230,63 @@ static DrvStatusTypeDef LSM6DS3_X_Get_6D_Orientation_ZH( DrvContextTypeDef *hand
   return COMPONENT_OK;
 }
 
+DrvStatusTypeDef MyLSM6DS3_X_Get_ODR( DrvContextTypeDef *handle, float *odr )
+{
+
+  LSM6DS3_ACC_GYRO_ODR_XL_t odr_low_level;
+  
+  if ( LSM6DS3_ACC_GYRO_R_ODR_XL( (void *)handle, &odr_low_level ) == MEMS_ERROR )
+  {
+    return COMPONENT_ERROR;
+  }
+  
+  switch( odr_low_level )
+  {
+    case LSM6DS3_ACC_GYRO_ODR_XL_POWER_DOWN:
+      *odr =     0.0f;
+      break;
+    case LSM6DS3_ACC_GYRO_ODR_XL_13Hz:
+      *odr =    13.0f;
+      break;
+    case LSM6DS3_ACC_GYRO_ODR_XL_26Hz:
+      *odr =    26.0f;
+      break;
+    case LSM6DS3_ACC_GYRO_ODR_XL_52Hz:
+      *odr =    52.0f;
+      break;
+    case LSM6DS3_ACC_GYRO_ODR_XL_104Hz:
+      *odr =   104.0f;
+      break;
+    case LSM6DS3_ACC_GYRO_ODR_XL_208Hz:
+      *odr =   208.0f;
+      break;
+    case LSM6DS3_ACC_GYRO_ODR_XL_416Hz:
+      *odr =   416.0f;
+      break;
+    case LSM6DS3_ACC_GYRO_ODR_XL_833Hz:
+      *odr =   833.0f;
+      break;
+    case LSM6DS3_ACC_GYRO_ODR_XL_1660Hz:
+      *odr =  1660.0f;
+      break;
+    case LSM6DS3_ACC_GYRO_ODR_XL_3330Hz:
+      *odr =  3330.0f;
+      break;
+    case LSM6DS3_ACC_GYRO_ODR_XL_6660Hz:
+      *odr =  6660.0f;
+      break;
+    case LSM6DS3_ACC_GYRO_ODR_XL_13330Hz:
+      *odr = 13330.0f;
+      break;
+    default:
+      *odr =    -1.0f;
+      return COMPONENT_ERROR;
+  }
+  
+  return COMPONENT_OK;
+}
+
+
 /**
  * @}
  */
