@@ -34,6 +34,7 @@
 #include <stdlib.h>
 
 UART_HandleTypeDef * uart;
+extern UART_HandleTypeDef LUart;				// debug uart
 
 //SoftwareSerial *serialSIM900 = NULL;
 
@@ -71,12 +72,13 @@ int sim900_wait_readable (int wait_time)
 void sim900_flush_serial()
 {
 	char c = 0;
-	if (uart->Instance->RDR & UART_FLAG_ORE)
+	if (uart->Instance->ISR & UART_FLAG_ORE)
 	{
 		uart->Instance->ICR = (uart->Instance->ICR | USART_ISR_ORE);
 	}
-  while(sim900_check_readable()){
-			char c = uart->Instance->RDR;
+  while(sim900_check_readable())
+	{
+			char c = uart->Instance->RDR; 			//LUart.Instance->TDR = c;	
   }
 }
 
@@ -90,7 +92,7 @@ void sim900_read_buffer(char *buffer, int count, unsigned int timeout/*, unsigne
     prevChar = 0;
     while(1) {
         while (sim900_check_readable()) {
-            c = uart->Instance->RDR;
+            c = uart->Instance->RDR;	//LUart.Instance->TDR = c;							
             prevChar = millis();
             buffer[i++] = c;
             if(i >= count)
@@ -162,7 +164,7 @@ boolean sim900_wait_for_resp(const char* resp, DataType type)
 	int resp_size = strlen(resp);
 	while(1) {
 			if(sim900_check_readable()) {
-				str[sum] = uart->Instance->RDR;
+				str[sum] = uart->Instance->RDR; 			//LUart.Instance->TDR = str[sum];	
 				if (str[sum] == resp[sum])
 					sum++;
 //				else

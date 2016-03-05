@@ -3,39 +3,49 @@
 <pre>
 <h1>µVision Build Log</h1>
 <h2>Tool Versions:</h2>
-IDE-Version: µVision V5.18.0.0
-Copyright (C) 2016 ARM Ltd and ARM Germany GmbH. All rights reserved.
-License Information: a a, a, LIC=----
+IDE-Version: µVision V5.17.0.0
+Copyright (C) 2015 ARM Ltd and ARM Germany GmbH. All rights reserved.
+License Information: 123 User, UralSOFT, LIC=----
  
 Tool Versions:
-Toolchain:       MDK-Lite  Version: 5.18
+Toolchain:       MDK-Lite  Version: 5.17
 Toolchain Path:  C:\Keil_v5\ARM\ARMCC\Bin
 C Compiler:      Armcc.exe V5.06 update 1 (build 61)
 Assembler:       Armasm.exe V5.06 update 1 (build 61)
 Linker/Locator:  ArmLink.exe V5.06 update 1 (build 61)
 Library Manager: ArmAr.exe V5.06 update 1 (build 61)
 Hex Converter:   FromElf.exe V5.06 update 1 (build 61)
-CPU DLL:         SARMCM3.DLL V5.18
+CPU DLL:         SARMCM3.DLL V5.17
 Dialog DLL:      DARMCM1.DLL V1.12.0.0
 Target DLL:      STLink\ST-LINKIII-KEIL_SWO.dll V2.0.18.0
 Dialog DLL:      TARMCM1.DLL V1.9.0.0
  
 <h2>Project:</h2>
-C:\Users\‡‰ÏËÌ\Documents\projects\gps\gps\Projects\gps\MDK-ARM\STM32L053R8-Nucleo\Project.uvprojx
-Project File Date:  02/21/2016
+D:\Work\GNSS\gps\gps\Projects\gps\MDK-ARM\STM32L053R8-Nucleo\Project.uvprojx
+Project File Date:  03/02/2016
 
 <h2>Output:</h2>
 *** Using Compiler 'V5.06 update 1 (build 61)', folder: 'C:\Keil_v5\ARM\ARMCC\Bin'
 Build target 'STM32L051_NUCLEO'
-compiling x_nucleo_iks01a1.c...
-..\..\Src\X_NUCLEO_IKS01A1\x_nucleo_iks01a1.c(279): warning:  #111-D: statement is unreachable
-    if( status != HAL_OK )
-..\..\Src\X_NUCLEO_IKS01A1\x_nucleo_iks01a1.c(325): warning:  #111-D: statement is unreachable
-    if( status != HAL_OK )
-..\..\Src\X_NUCLEO_IKS01A1\x_nucleo_iks01a1.c: 2 warnings, 0 errors
+compiling sim900.c...
+..\..\Src\sim900.c(74): warning:  #177-D: variable "c" was declared but never referenced
+  	char c = 0;
+..\..\Src\sim900.c(87): warning:  #177-D: variable "chartimeout" was declared but never referenced
+  		const int chartimeout = 100;
+..\..\Src\sim900.c(89): warning:  #550-D: variable "prevChar" was set but never used
+      unsigned long timerStart, prevChar;
+..\..\Src\sim900.c(164): warning:  #223-D: function "strlen" declared implicitly
+  	int resp_size = strlen(resp);
+..\..\Src\sim900.c(187): warning:  #111-D: statement is unreachable
+  	if(type == CMD)
+..\..\Src\sim900.c(160): warning:  #177-D: variable "chartimeout" was declared but never referenced
+  	unsigned int chartimeout = 500;    
+..\..\Src\sim900.c(162): warning:  #177-D: variable "prevChar" was declared but never referenced
+  	unsigned long timerStart, prevChar;    //prevChar is the time when the previous Char has been read.
+..\..\Src\sim900.c: 7 warnings, 0 errors
 linking...
-Program Size: Code=28132 RO-data=1520 RW-data=552 ZI-data=2904  
-"STM32L053R8_NUCLEO\STM32L053R8_NUCLEO.axf" - 0 Error(s), 2 Warning(s).
+Program Size: Code=16812 RO-data=548 RW-data=136 ZI-data=4232  
+"STM32L053R8_NUCLEO\STM32L053R8_NUCLEO.axf" - 0 Error(s), 7 Warning(s).
 
 <h2>Software Packages used:</h2>
 
@@ -46,14 +56,14 @@ Package Vendor: ARM
    * Component: CORE Version: 4.3.0
 
 <h2>Collection of Component include folders:</h2>
-  C:\Users\‡‰ÏËÌ\Documents\projects\gps\gps\Projects\gps\MDK-ARM\STM32L053R8-Nucleo\RTE
+  D:\Work\GNSS\gps\gps\Projects\gps\MDK-ARM\STM32L053R8-Nucleo\RTE
   C:\Keil_v5\ARM\PACK\ARM\CMSIS\4.5.0\CMSIS\Include
   C:\Keil_v5\ARM\PACK\Keil\STM32L0xx_DFP\1.4.0\Device\Include
 
 <h2>Collection of Component Files used:</h2>
 
    * Component: ARM::CMSIS:CORE:4.3.0
-Build Time Elapsed:  00:00:01
+Build Time Elapsed:  00:00:00
 </pre>
 </body>
 </html>

@@ -57,8 +57,8 @@
  * @{
  */
 
-static uint32_t I2C_EXPBD_Timeout = 100;    /*<! Value of Timeout when I2C communication fails */
-static I2C_HandleTypeDef I2C_EXPBD_Handle;
+static uint32_t SPI_EXPBD_Timeout = 100;    /*<! Value of Timeout when SPI communication fails */
+static SPI_HandleTypeDef SPI_EXPBD_Handle;
 static SPI_HandleTypeDef SpiHandle;
 
 #define RX_TX_BUFFER_SIZE 32
@@ -73,18 +73,18 @@ static uint8_t spi_tx_buffer[RX_TX_BUFFER_SIZE];
 uint8_t Sensor_IO_Write( void *handle, uint8_t WriteAddr, uint8_t *pBuffer, uint16_t nBytesToWrite );
 uint8_t Sensor_IO_Read( void *handle, uint8_t ReadAddr, uint8_t *pBuffer, uint16_t nBytesToRead );
 
-static void I2C_EXPBD_MspInit( void );
-static void I2C_EXPBD_Error( uint8_t Addr );
-static uint8_t I2C_EXPBD_ReadData( uint8_t Addr, uint8_t Reg, uint8_t* pBuffer, uint16_t Size );
-static uint8_t I2C_EXPBD_WriteData( uint8_t Addr, uint8_t Reg, uint8_t* pBuffer, uint16_t Size );
-static uint8_t I2C_EXPBD_Init( void );
+static void SPI_EXPBD_MspInit( void );
+static void SPI_EXPBD_Error( uint8_t Addr );
+static uint8_t SPI_EXPBD_ReadData( uint8_t Addr, uint8_t Reg, uint8_t* pBuffer, uint16_t Size );
+static uint8_t SPI_EXPBD_WriteData( uint8_t Addr, uint8_t Reg, uint8_t* pBuffer, uint16_t Size );
+static uint8_t SPI_EXPBD_Init( void );
 
 /** @addtogroup X_NUCLEO_IKS01A1_IO_Public_Functions Public functions
  * @{
  */
 
 /**
- * @brief  Configures sensor I2C interface.
+ * @brief  Configures sensor SPI interface.
  * @param  None
  * @retval COMPONENT_OK in case of success
  * @retval COMPONENT_ERROR in case of failure
@@ -92,7 +92,7 @@ static uint8_t I2C_EXPBD_Init( void );
 DrvStatusTypeDef Sensor_IO_Init( void )
 {
 
-  if ( I2C_EXPBD_Init() )
+  if ( SPI_EXPBD_Init() )
   {
     return COMPONENT_ERROR;
   }
@@ -173,8 +173,8 @@ uint8_t Sensor_IO_Write( void *handle, uint8_t WriteAddr, uint8_t *pBuffer, uint
 {
   DrvContextTypeDef *ctx = (DrvContextTypeDef *)handle;
   
-  /* call I2C_EXPBD Read data bus function */
-  if ( I2C_EXPBD_WriteData( ctx->address, WriteAddr, pBuffer, nBytesToWrite ) )
+  /* call SPI_EXPBD Read data bus function */
+  if ( SPI_EXPBD_WriteData( ctx->address, WriteAddr, pBuffer, nBytesToWrite ) )
   {
     return 1;
   }
@@ -199,8 +199,8 @@ uint8_t Sensor_IO_Read( void *handle, uint8_t ReadAddr, uint8_t *pBuffer, uint16
 {
   DrvContextTypeDef *ctx = (DrvContextTypeDef *)handle;
   
-	/* call I2C_EXPBD Read data bus function */
-  if ( I2C_EXPBD_ReadData( ctx->address, ReadAddr, pBuffer, nBytesToRead ) )
+	/* call SPI_EXPBD Read data bus function */
+  if ( SPI_EXPBD_ReadData( ctx->address, ReadAddr, pBuffer, nBytesToRead ) )
   {
     return 1;
   }
@@ -212,18 +212,18 @@ uint8_t Sensor_IO_Read( void *handle, uint8_t ReadAddr, uint8_t *pBuffer, uint16
 
 
 
-/******************************* I2C Routines *********************************/
+/******************************* SPI Routines *********************************/
 
 /**
- * @brief  Configures I2C interface.
+ * @brief  Configures SPI interface.
  * @param  None
  * @retval 0 in case of success
  * @retval 1 in case of failure
  */
-static uint8_t I2C_EXPBD_Init( void )
+static uint8_t SPI_EXPBD_Init( void )
 {
 	
-	I2C_EXPBD_MspInit();
+	SPI_EXPBD_MspInit();
 	
 	SpiHandle.Instance               = SPI2;
   
@@ -232,7 +232,7 @@ static uint8_t I2C_EXPBD_Init( void )
   SpiHandle.Init.CLKPhase          = SPI_PHASE_2EDGE;
   SpiHandle.Init.CLKPolarity       = SPI_POLARITY_HIGH;
   SpiHandle.Init.CRCCalculation    = 0;//SPI_CRCCALCULATION_DISABLE; //TODO
-  SpiHandle.Init.CRCPolynomial     = 7;
+  SpiHandle.Init.CRCPolynomial     = 0;
   SpiHandle.Init.DataSize          = SPI_DATASIZE_8BIT;
   SpiHandle.Init.FirstBit          = SPI_FIRSTBIT_MSB;
   SpiHandle.Init.NSS               = SPI_NSS_SOFT;
@@ -258,7 +258,7 @@ static uint8_t I2C_EXPBD_Init( void )
  * @retval 0 in case of success
  * @retval 1 in case of failure
  */
-static uint8_t I2C_EXPBD_WriteData( uint8_t Addr, uint8_t Reg, uint8_t* pBuffer, uint16_t Size )
+static uint8_t SPI_EXPBD_WriteData( uint8_t Addr, uint8_t Reg, uint8_t* pBuffer, uint16_t Size )
 {
 
   HAL_StatusTypeDef status = HAL_OK;
@@ -270,7 +270,7 @@ static uint8_t I2C_EXPBD_WriteData( uint8_t Addr, uint8_t Reg, uint8_t* pBuffer,
 		spi_tx_buffer[i + 1] = pBuffer[i];
 	}
   HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_RESET);
-	status = HAL_SPI_TransmitReceive(&SpiHandle, spi_tx_buffer, spi_rx_buffer, Size + 1, I2C_EXPBD_Timeout);
+	status = HAL_SPI_TransmitReceive(&SpiHandle, spi_tx_buffer, spi_rx_buffer, Size + 1, SPI_EXPBD_Timeout);
 	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_SET);
 	
 	return status;
@@ -280,7 +280,7 @@ static uint8_t I2C_EXPBD_WriteData( uint8_t Addr, uint8_t Reg, uint8_t* pBuffer,
   {
   
     /* Execute user& timeout callback */
-    I2C_EXPBD_Error( Addr );
+    SPI_EXPBD_Error( Addr );
     return 1;
   }
   else
@@ -300,67 +300,47 @@ static uint8_t I2C_EXPBD_WriteData( uint8_t Addr, uint8_t Reg, uint8_t* pBuffer,
  * @retval 0 in case of success
  * @retval 1 in case of failure
  */
-static uint8_t I2C_EXPBD_ReadData( uint8_t Addr, uint8_t Reg, uint8_t* pBuffer, uint16_t Size )
+static uint8_t SPI_EXPBD_ReadData( uint8_t Addr, uint8_t Reg, uint8_t* pBuffer, uint16_t Size )
 {
 
   HAL_StatusTypeDef status = HAL_OK;
 	
 	spi_tx_buffer[0] = Reg | (1 << 7);
-	 
 	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_RESET);
-	//status = HAL_SPI_TransmitReceive(&SpiHandle, spi_tx_buffer, pBuffer, Size + 1, I2C_EXPBD_Timeout);
-	
-	
-	for (int i = 0; i < Size + 1 && (i < RX_TX_BUFFER_SIZE); ++i)
-	{
-		while(!(SpiHandle.Instance->SR & SPI_FLAG_TXE));
-		SpiHandle.Instance->DR = spi_tx_buffer[i];
-		spi_rx_buffer[i] = SpiHandle.Instance->DR;
-	}
+	status = HAL_SPI_TransmitReceive(&SpiHandle, spi_tx_buffer, spi_rx_buffer, Size + 1, SPI_EXPBD_Timeout);	
+	while((SpiHandle.Instance->SR & SPI_FLAG_BSY));
 	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_SET);
 	
-	return status;
-                             
-  /* Check the communication status */
-  if( status != HAL_OK )
-  {
-  
-    /* Execute user timeout callback */
-    I2C_EXPBD_Error( Addr );
-    return 1;
-  }
-  else
-  {
-    return 0;
-  }
+	memcpy(pBuffer, &spi_rx_buffer[1], Size);	
+	return status;                             
 }
 
 
 
 /**
- * @brief  Manages error callback by re-initializing I2C
- * @param  Addr I2C Address
+ * @brief  Manages error callback by re-initializing SPI
+ * @param  Addr SPI Address
  * @retval None
  */
-static void I2C_EXPBD_Error( uint8_t Addr )
+static void SPI_EXPBD_Error( uint8_t Addr )
 {
 
-  /* De-initialize the I2C comunication bus */
-  HAL_I2C_DeInit( &I2C_EXPBD_Handle );
+  /* De-initialize the SPI comunication bus */
+  HAL_SPI_DeInit( &SPI_EXPBD_Handle );
   
-  /* Re-Initiaize the I2C comunication bus */
-  I2C_EXPBD_Init();
+  /* Re-Initiaize the SPI comunication bus */
+  SPI_EXPBD_Init();
 }
 
 
 
 /**
- * @brief I2C MSP Initialization
+ * @brief SPI MSP Initialization
  * @param None
  * @retval None
  */
 
-static void I2C_EXPBD_MspInit( void )
+static void SPI_EXPBD_MspInit( void )
 {
 	
 		GPIO_InitTypeDef GPIO_InitStruct;
@@ -374,6 +354,7 @@ static void I2C_EXPBD_MspInit( void )
   GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
+	GPIO_InitStruct.Pull = GPIO_PULLDOWN;
 	GPIO_InitStruct.Alternate = GPIO_AF0_SPI2;
 	
 	// SPI CS
@@ -384,17 +365,19 @@ static void I2C_EXPBD_MspInit( void )
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
 	HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);	
+	
+	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_SET);
   
   /* Enable the SPI2 peripheral clock */
   __SPI2_CLK_ENABLE();
   
-  /* Force the I2C peripheral clock reset */
+  /* Force the SPI peripheral clock reset */
   NUCLEO_SPI_FORCE_RESET();
   
-  /* Release the I2C peripheral clock reset */
+  /* Release the SPI peripheral clock reset */
   NUCLEO_SPI_RELEASE_RESET();
   
-  /* Enable and set I2C_EXPBD Interrupt to the highest priority */
+  /* Enable and set SPI_EXPBD Interrupt to the highest priority */
   HAL_NVIC_SetPriority(SPI2_IRQn, 0, 0);
   HAL_NVIC_EnableIRQ(SPI2_IRQn);
   

@@ -59,7 +59,6 @@
 
 static DrvContextTypeDef ACCELERO_SensorHandle[ ACCELERO_SENSORS_MAX_NUM ];
 static ACCELERO_Data_t ACCELERO_Data[ ACCELERO_SENSORS_MAX_NUM ]; // Accelerometer - all.
-static LSM6DS0_X_Data_t LSM6DS0_X_0_Data; // Accelerometer - sensor 0.
 static LSM6DS3_X_Data_t LSM6DS3_X_0_Data; // Accelerometer - sensor 1.
 
 /**
@@ -70,7 +69,6 @@ static LSM6DS3_X_Data_t LSM6DS3_X_0_Data; // Accelerometer - sensor 1.
  * @{
  */
 
-static DrvStatusTypeDef BSP_LSM6DS0_ACCELERO_Init( void **handle );
 static DrvStatusTypeDef BSP_LSM6DS3_ACCELERO_Init( void **handle );
 
 /**
@@ -102,8 +100,6 @@ DrvStatusTypeDef BSP_ACCELERO_Init( ACCELERO_ID_t id, void **handle )
       /* Try to init the LSM6DS3 before */
       if( BSP_LSM6DS3_ACCELERO_Init(handle) == COMPONENT_ERROR )
       {
-        /* Try to init the LSM6DS0 if we do not use the LSM6DS3 */
-        if( BSP_LSM6DS0_ACCELERO_Init(handle) == COMPONENT_ERROR )
         {
           return COMPONENT_ERROR;
         }
@@ -112,7 +108,6 @@ DrvStatusTypeDef BSP_ACCELERO_Init( ACCELERO_ID_t id, void **handle )
     }
     case LSM6DS0_X_0:
     {
-      if( BSP_LSM6DS0_ACCELERO_Init(handle) == COMPONENT_ERROR )
       {
         return COMPONENT_ERROR;
       }
@@ -131,59 +126,7 @@ DrvStatusTypeDef BSP_ACCELERO_Init( ACCELERO_ID_t id, void **handle )
   return COMPONENT_OK;
 }
 
-static DrvStatusTypeDef BSP_LSM6DS0_ACCELERO_Init( void **handle )
-{
-  ACCELERO_Drv_t *driver = NULL;
-  
-  if(ACCELERO_SensorHandle[ LSM6DS0_X_0 ].isInitialized == 1)
-  {
-    /* We have reached the max num of instance for this component */
-    return COMPONENT_ERROR;
-  }
-  
-  if ( Sensor_IO_Init() == COMPONENT_ERROR )
-  {
-    return COMPONENT_ERROR;
-  }
-  
-  /* Setup sensor handle. */
-  ACCELERO_SensorHandle[ LSM6DS0_X_0 ].who_am_i      = LSM6DS0_ACC_GYRO_WHO_AM_I;
-  ACCELERO_SensorHandle[ LSM6DS0_X_0 ].address       = LSM6DS0_ACC_GYRO_I2C_ADDRESS_HIGH;
-  ACCELERO_SensorHandle[ LSM6DS0_X_0 ].instance      = LSM6DS0_X_0;
-  ACCELERO_SensorHandle[ LSM6DS0_X_0 ].isInitialized = 0;
-  ACCELERO_SensorHandle[ LSM6DS0_X_0 ].isEnabled     = 0;
-  ACCELERO_SensorHandle[ LSM6DS0_X_0 ].isCombo       = 1;
-  ACCELERO_SensorHandle[ LSM6DS0_X_0 ].pData         = ( void * )&ACCELERO_Data[ LSM6DS0_X_0 ];
-  ACCELERO_SensorHandle[ LSM6DS0_X_0 ].pVTable       = ( void * )&LSM6DS0_X_Drv;
-  ACCELERO_SensorHandle[ LSM6DS0_X_0 ].pExtVTable    = 0;
-  
-  LSM6DS0_X_0_Data.comboData = &LSM6DS0_Combo_Data[0];
-  ACCELERO_Data[ LSM6DS0_X_0 ].pComponentData = ( void * )&LSM6DS0_X_0_Data;
-  ACCELERO_Data[ LSM6DS0_X_0 ].pExtData       = 0;
-  
-  *handle = (void *)&ACCELERO_SensorHandle[ LSM6DS0_X_0 ];
-  
-  driver = ( ACCELERO_Drv_t * )((DrvContextTypeDef *)(*handle))->pVTable;
-  
-  if ( driver->Init == NULL )
-  {
-    memset((*handle), 0, sizeof(DrvContextTypeDef));
-    *handle = NULL;
-    return COMPONENT_ERROR;
-  }
-  
-  if ( driver->Init( (DrvContextTypeDef *)(*handle) ) == COMPONENT_ERROR )
-  {
-    memset((*handle), 0, sizeof(DrvContextTypeDef));
-    *handle = NULL;
-    return COMPONENT_ERROR;
-  }
-  
-  /* Configure interrupt lines for LSM6DS0 */
-  LSM6DS0_Sensor_IO_ITConfig();
-  
-  return COMPONENT_OK;
-}
+
 
 static DrvStatusTypeDef BSP_LSM6DS3_ACCELERO_Init( void **handle )
 {

@@ -263,6 +263,8 @@ extern ACCELERO_Drv_t LSM6DS3_X_Drv;
 extern LSM6DS3_X_ExtDrv_t LSM6DS3_X_ExtDrv;
 extern GYRO_Drv_t LSM6DS3_G_Drv;
 
+DrvStatusTypeDef MyLSM6DS3_X_Get_ODR( DrvContextTypeDef *handle, float *odr );
+
 /**
  * @}
  */
