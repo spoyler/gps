@@ -84,7 +84,7 @@ void sim900_flush_serial()
 
 void sim900_read_buffer(char *buffer, int count, unsigned int timeout/*, unsigned int chartimeout*/)
 {
-		const int chartimeout = 100;
+	const int chartimeout = 500;
     int i = 0;
     unsigned long timerStart, prevChar;
 		char c = 0;

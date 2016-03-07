@@ -48,27 +48,14 @@ typedef enum {
 
 //#define DEFAULT_TIMEOUT 500
 #define CHART_TIMEOUT		100
+
+		void GSM_Task();
  
 
     /** Create GPRS instance
      *  @param number default phone number during mobile communication
      */
-	 
-    //GPRS(uint8_t tx, uint8_t rx, uint32_t baudRate = 9600 ); 
-		void gsm(UART_HandleTypeDef * uart_handle); 
-    
-    /** get instance of GPRS class
-     */
- /*   static GPRS* getInstance() {
-        return inst;
-    };*/
-    
-    /** initialize GPRS module including SIM card check & signal strength
-     *  @return true if connected, false otherwise
-     */
-
-    bool gsm_init();
-
+		void GSM_Init();    
    
     /** check if GPRS module is powered on or not
      *  @returns
@@ -306,4 +293,6 @@ typedef enum {
 	
 
     bool checkSIMStatus(void);
+		
+		void GetMoney();
 #endif

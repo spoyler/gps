@@ -33,17 +33,25 @@
 #include <string.h>
 #include "GPRS_Shield_Arduino.h"
 #include "debug.h"
+#include "gps.h"
+#include "accelero.h"
 
-#define RX_BUFFER_SIZE 256	
-uint32_t rx_buffer[RX_BUFFER_SIZE];
+UART_HandleTypeDef UartGSM;			// gsm uart
+
+
+char data[512];
 
 uint32_t str_to_ip(const char* str);
 uint32_t _ip;
 char ip_string[16]; //XXX.YYY.ZZZ.WWW + \0
-		
-extern UART_HandleTypeDef * uart;		
-
 const char resp_ok[] = "OK\r\n";
+
+const char host_name[] = "paulfertser.info";
+const int host_port = 10123;
+const char vtuin[] = "$VTUIN,001";
+const char vtag[] = "$VTAG,001";
+
+
 
 void delay(int time)
 {
@@ -57,63 +65,59 @@ void itoa(int n, char * s)
 
 
 
-void gsm(UART_HandleTypeDef * uart_handle)//:gprsSerial(tx,rx)
+void GSM_Init(void)//:gprsSerial(tx,rx)
 {
 
 	// UART Init
 	__USART2_CLK_ENABLE();
-	uart_handle->Instance = USART2;
-	uart_handle->Init.BaudRate   = 9600;
-	uart_handle->Init.WordLength = UART_WORDLENGTH_8B;
-	uart_handle->Init.StopBits   = UART_STOPBITS_1;
-	uart_handle->Init.Parity     = UART_PARITY_NONE;
-	uart_handle->Init.HwFlowCtl  = UART_HWCONTROL_NONE;
-	uart_handle->Init.Mode       = UART_MODE_TX_RX;
-	uart_handle->AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_NO_INIT;
+	UartGSM.Instance = USART2;
+	UartGSM.Init.BaudRate   = 9600;
+	UartGSM.Init.WordLength = UART_WORDLENGTH_8B;
+	UartGSM.Init.StopBits   = UART_STOPBITS_1;
+	UartGSM.Init.Parity     = UART_PARITY_NONE;
+	UartGSM.Init.HwFlowCtl  = UART_HWCONTROL_NONE;
+	UartGSM.Init.Mode       = UART_MODE_TX_RX;
+	UartGSM.AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_NO_INIT;
 	
-	HAL_UART_DeInit(uart_handle);  
-  HAL_UART_Init(uart_handle);
+	HAL_UART_DeInit(&UartGSM);  
+  HAL_UART_Init(&UartGSM);
  /* Enable the UART Parity Error Interrupt */
-	__HAL_UART_ENABLE_IT(uart_handle, UART_IT_ORE);
+	__HAL_UART_ENABLE_IT(&UartGSM, UART_IT_ORE);
 	
 	/* Process Unlocked */
-	__HAL_UNLOCK(uart_handle); 
+	__HAL_UNLOCK(&UartGSM); 
 	HAL_NVIC_EnableIRQ(USART2_IRQn);
 
 	//
-	sim900_init(uart_handle);
+	sim900_init(&UartGSM);
 	
 	DEBUG_PRINTF("GSM power up...");
 	powerUpDown();
 	DEBUG_PRINTF("Ok\r\n");
 
-	gsm_init();
-}
 
-bool gsm_init()
-{
 	char c = 0;
 	char cc = 0;
 	
 	DEBUG_PRINTF("UART GSM baudrate adjusting...");
 	while(1)
 	{		
-		while(!(uart->Instance->ISR & UART_FLAG_TXE));
-		uart->Instance->TDR = 'A';		
+		while(!(UartGSM.Instance->ISR & UART_FLAG_TXE));
+		UartGSM.Instance->TDR = 'A';		
 		HAL_Delay(10);		
-		while (uart->Instance->ISR & UART_FLAG_RXNE)
+		while (UartGSM.Instance->ISR & UART_FLAG_RXNE)
 		{
-			c = uart->Instance->RDR;
+			c = UartGSM.Instance->RDR;
 		}		
 		HAL_Delay(500);
-		while(!(uart->Instance->ISR & UART_FLAG_TXE));
-		uart->Instance->TDR = 'T';			
+		while(!(UartGSM.Instance->ISR & UART_FLAG_TXE));
+		UartGSM.Instance->TDR = 'T';			
 		
 		HAL_Delay(10);
 		
-		while (uart->Instance->ISR & UART_FLAG_RXNE)
+		while (UartGSM.Instance->ISR & UART_FLAG_RXNE)
 		{
-			cc = uart->Instance->RDR;
+			cc = UartGSM.Instance->RDR;
 		}
 		
 		if ((cc == 0x54) && (c == 0x41))
@@ -134,8 +138,40 @@ bool gsm_init()
 	DEBUG_PRINTF("Check SIM status...");  
 	while(!checkSIMStatus());
 	DEBUG_PRINTF("Ok\r\n");
+}
 
-	return true;
+void GSM_Task()
+{
+	char * ptr_gps_msg = 0;
+	// if state active then send data to the server
+	if (Get_Accelero_State())
+	{
+		if (!is_connected())
+		{
+			DEBUG_PRINTF("Connecting to %s:%d... ", host_name, host_port);
+			if (connect(TCP,host_name, host_port, 2, 100))
+			{
+				DEBUG_PRINTF("Ok\r\n");
+			}
+			else
+			{
+				DEBUG_PRINTF("Error\r\n");
+			}
+		}
+		else
+		{
+			ptr_gps_msg = (char *)Get_GPS_Message(GGA);
+			
+			if (ptr_gps_msg != nullptr)
+			{
+				memset(data,0, 512);					
+				sprintf(data, "%s\r\n%s\r\n%s\r\n", vtuin, ptr_gps_msg, vtag);				
+				//sprintf(data, "%s\r\n", ptr_gps_msg);				
+				send(data, strlen(data));
+				DEBUG_PRINTF("%s", data);
+			}
+		}			
+	}
 }
 
 bool checkPowerUp(void)
@@ -166,21 +202,13 @@ bool checkSIMStatus(void)
 				|| (NULL != strstr(gprsBuffer,"+CGREG: 0,5")))
 					
 					{
-            break;
+            return true;
         }
         count++;
         delay(300);
     }
-    if(count == 3) 
-		{
-			memset(rx_buffer, 0, RX_BUFFER_SIZE);
-			getSignalStrength(rx_buffer);
-		
-			DEBUG_PRINTF("%s\r\n", rx_buffer);
-			return false;
-    }
-		
-    return true;
+
+		return false;
 }
 
 bool sendSMS(char *number, char *data)
@@ -750,3 +778,7 @@ unsigned long getIPnumber()
 }
 
 
+void USART2_IRQHandler(void)
+{
+  HAL_UART_IRQHandler(&UartGSM);
+}
