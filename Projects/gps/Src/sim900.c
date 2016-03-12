@@ -46,7 +46,6 @@ int millis()
 void sim900_init(UART_HandleTypeDef * uart_device)
 {
     uart = (UART_HandleTypeDef*)uart_device;
-		//begin(baud);
 }
 
 int sim900_check_readable()
@@ -84,7 +83,7 @@ void sim900_flush_serial()
 
 void sim900_read_buffer(char *buffer, int count, unsigned int timeout/*, unsigned int chartimeout*/)
 {
-		const int chartimeout = 100;
+	const int chartimeout = 500;
     int i = 0;
     unsigned long timerStart, prevChar;
 		char c = 0;
@@ -155,7 +154,7 @@ void sim900_send_End_Mark(void)
 
 boolean sim900_wait_for_resp(const char* resp, DataType type)
 {
-	char str[64] = {0};
+	char str[512] = {0};
 	unsigned int timeout = 2000;
 	unsigned int chartimeout = 500;    
 	int sum = 0;
@@ -196,11 +195,4 @@ boolean sim900_check_with_cmd(const char* cmd, const char *resp, DataType type)
     sim900_send_cmd(cmd, 0);
     return sim900_wait_for_resp(resp,type);
 }
-/*
-//HACERR que tambien la respuesta pueda ser FLASH STRING
-boolean sim900_check_with_cmd(const __FlashStringHelper* cmd, const char *resp, DataType type, unsigned int timeout, unsigned int chartimeout)
-{
-    sim900_send_cmd(cmd);
-    return sim900_wait_for_resp(resp,type,timeout,chartimeout);
-}
-*/
+

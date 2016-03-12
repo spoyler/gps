@@ -7,7 +7,9 @@
 #include <stdlib.h>
 #include "rtc.h"
 #include "debug.h"
+#include "gps.h"
 
+uint32_t last_time_tick = 0;
 /* RTC handler declaration */
 RTC_HandleTypeDef RtcHandle; 
 TIM_HandleTypeDef Input_Handle;
@@ -46,6 +48,8 @@ void RTC_Init()
 
     /*##-2-  Configure RTC Timestamp ############################################*/
   RTC_TimeStampConfig();
+	
+	last_time_tick = HAL_GetTick();
 }
 
 void HAL_RTC_MspInit(RTC_HandleTypeDef *hrtc)
@@ -295,8 +299,9 @@ void RTC_CalendarSet(char * gps_msg)
 {
 	//gps_msg format // $GNZDA,201705.089,29,02,2016,,*44
 	
-  RTC_DateTypeDef new_date;
-  RTC_TimeTypeDef new_time;
+  RTC_DateTypeDef new_date = {0};
+  RTC_TimeTypeDef new_time = {0};
+	
 	int32_t year = 0;
 	char date_time[5] = {0};
 	
@@ -331,10 +336,13 @@ void RTC_CalendarSet(char * gps_msg)
 			(new_date.Year > 0 &&  new_date.Year < 79))
 	{
 		
+		new_time.DayLightSaving = RTC_DAYLIGHTSAVING_NONE;
+		new_time.StoreOperation = RTC_STOREOPERATION_SET;
+		
 		/* Display time Format : hh:mm:ss */
-		DEBUG_PRINTF("%.2d:%.2d:%.2d\r\n", new_time.Hours, new_time.Minutes, new_time.Seconds);
+//		DEBUG_PRINTF("%.2d:%.2d:%.2d\r\n", new_time.Hours, new_time.Minutes, new_time.Seconds);
 		/* Display date Format : mm-dd-yy */
-		DEBUG_PRINTF("%.2d-%.2d-%.2d\r\n", new_date.Month, new_date.Date, 2000 + new_date.Year);
+//		DEBUG_PRINTF("%.2d-%.2d-%.2d\r\n", new_date.Month, new_date.Date, 2000 + new_date.Year);
 		
 		/* Get the RTC current Date */
 		HAL_RTC_SetDate(&RtcHandle, &new_date, RTC_FORMAT_BIN);
@@ -343,6 +351,24 @@ void RTC_CalendarSet(char * gps_msg)
 
 		
 		//
+//		RTC_CalendarShow();
+	}
+}
+
+void RTC_Task()
+{
+	// time synchro
+	char * ptr_gps_msg = (char *)Get_GPS_Message(ZDA);
+	if (ptr_gps_msg != nullptr)
+	{
+		RTC_CalendarSet(ptr_gps_msg);
+	}	
+	
+	return;
+	uint32_t tick = HAL_GetTick();
+	if ((tick - last_time_tick) > 10000)
+	{
+		last_time_tick = tick;
 		RTC_CalendarShow();
 	}
 }

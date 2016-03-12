@@ -13,3 +13,4 @@
 *.map
 *.TMP
 *.bak
+/Projects/gps/MDK-ARM/STM32L053R8-Nucleo/*.lst

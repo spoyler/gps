@@ -21,6 +21,7 @@
 void RTC_Init(void);
 void RTC_CalendarShow(void);
 void RTC_CalendarSet(char * gps_msg);
+void RTC_Task();
 
 
 #endif
