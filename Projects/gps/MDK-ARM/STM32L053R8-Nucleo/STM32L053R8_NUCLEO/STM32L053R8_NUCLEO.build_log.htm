@@ -5,7 +5,7 @@
 <h2>Tool Versions:</h2>
 IDE-Version: µVision V5.17.0.0
 Copyright (C) 2015 ARM Ltd and ARM Germany GmbH. All rights reserved.
-License Information: 123 User, UralSOFT, LIC=----
+License Information: 123 User, UralSOFT, LIC=W9612-99X7H-15NTV-P8F1P-GZ9PY-CYWV2
  
 Tool Versions:
 Toolchain:       MDK-ARM Professional  Version: 5.17
@@ -22,54 +22,46 @@ Dialog DLL:      TARMCM1.DLL V1.9.0.0
  
 <h2>Project:</h2>
 D:\Work\GNSS\gps\gps\Projects\gps\MDK-ARM\STM32L053R8-Nucleo\Project.uvprojx
-Project File Date:  03/12/2016
+Project File Date:  03/19/2016
 
 <h2>Output:</h2>
 *** Using Compiler 'V5.06 update 1 (build 61)', folder: 'C:\Keil_v5\ARM\ARMCC\Bin'
 Build target 'STM32L051_NUCLEO'
-compiling GPRS_Shield_Arduino.c...
-..\..\Inc\GPRS_Shield_Arduino.h(52): warning:  #1295-D: Deprecated declaration GSM_Task - give arg types
-  		void GSM_Task();
-..\..\Inc\GPRS_Shield_Arduino.h(58): warning:  #1295-D: Deprecated declaration GSM_Init - give arg types
-  		void GSM_Init();    
-..\..\Inc\GPRS_Shield_Arduino.h(73): warning:  #1295-D: Deprecated declaration powerUpDown - give arg types
-      void powerUpDown();
-..\..\Inc\GPRS_Shield_Arduino.h(297): warning:  #1295-D: Deprecated declaration GetMoney - give arg types
-  		void GetMoney();
+compiling command.c...
+..\..\Inc\command.h(19): warning:  #1295-D: Deprecated declaration Command_Init - give arg types
+  void Command_Init();
+..\..\Inc\command.h(20): warning:  #1295-D: Deprecated declaration Command_Task - give arg types
+  void Command_Task();
 ..\..\Inc\debug.h(12): warning:  #1295-D: Deprecated declaration InitDebugUart - give arg types
   int InitDebugUart();
 ..\..\Inc\accelero.h(15): warning:  #1295-D: Deprecated declaration ACCELERO_Init - give arg types
   void ACCELERO_Init();
 ..\..\Inc\accelero.h(16): warning:  #1295-D: Deprecated declaration Get_Accelero_State - give arg types
   uint8_t Get_Accelero_State();
-..\..\Inc\accelero.h(17): warning:  #1295-D: Deprecated declaration Accelero_Task - give arg types
-  int Accelero_Task();
-..\..\Inc\accelero.h(18): warning:  #1295-D: Deprecated declaration Get_ACC_Data - give arg types
+..\..\Inc\accelero.h(17): warning:  #1295-D: Deprecated declaration Get_Free_Fall_State - give arg types
+  uint8_t Get_Free_Fall_State();
+..\..\Inc\accelero.h(18): warning:  #1295-D: Deprecated declaration Accelero_Task - give arg types
+  void Accelero_Task();
+..\..\Inc\accelero.h(19): warning:  #1295-D: Deprecated declaration Get_ACC_Data - give arg types
   SensorAxesRaw_t * Get_ACC_Data();
-..\..\Inc\accelero.h(19): warning:  #1295-D: Deprecated declaration Get_GYRO_Data - give arg types
+..\..\Inc\accelero.h(20): warning:  #1295-D: Deprecated declaration Get_GYRO_Data - give arg types
   SensorAxesRaw_t * Get_GYRO_Data();
-..\..\Inc\accelero.h(22): warning:  #1-D: last line of file ends without a newline
+..\..\Inc\accelero.h(23): warning:  #1-D: last line of file ends without a newline
   #endif
-..\..\Inc\adc.h(11): warning:  #1295-D: Deprecated declaration ADC_Init - give arg types
-  void ADC_Init();
-..\..\Inc\adc.h(12): warning:  #1295-D: Deprecated declaration ADC_Task - give arg types
-  void ADC_Task();
-..\..\Inc\adc.h(13): warning:  #1295-D: Deprecated declaration Get_ADC_Data - give arg types
-  uint16_t * Get_ADC_Data();
-..\..\Src\GPRS_Shield_Arduino.c(314): warning:  #223-D: function "atoi" declared implicitly
-                  return atoi(s+1);
-..\..\Src\GPRS_Shield_Arduino.c(317): warning:  #68-D: integer conversion resulted in a change of sign
-              return -1; 
-..\..\Src\GPRS_Shield_Arduino.c(321): warning:  #68-D: integer conversion resulted in a change of sign
-      return -1;
-..\..\Src\GPRS_Shield_Arduino.c(600): warning:  #223-D: function "atoi" declared implicitly
-  		*buffer = atoi(buffers);
-..\..\Src\GPRS_Shield_Arduino.c(776): warning:  #223-D: function "atoi" declared implicitly
-          ip |= atoi(p);
-..\..\Src\GPRS_Shield_Arduino.c: 19 warnings, 0 errors
+..\..\Inc\rtc.h(25): warning:  #1295-D: Deprecated declaration RTC_Task - give arg types
+  void RTC_Task();
+..\..\Src\command.c(120): warning:  #68-D: integer conversion resulted in a change of sign
+  		return -1;
+..\..\Src\command.c(173): warning:  #68-D: integer conversion resulted in a change of sign
+  		return -1;
+..\..\Src\command.c(223): warning:  #177-D: variable "size" was declared but never referenced
+  				int size = 0;
+..\..\Src\command.c(319): warning:  #223-D: function "atoi" declared implicitly
+  			reg = atoi(number);
+..\..\Src\command.c: 15 warnings, 0 errors
 linking...
-Program Size: Code=32200 RO-data=544 RW-data=448 ZI-data=3640  
-"STM32L053R8_NUCLEO\STM32L053R8_NUCLEO.axf" - 0 Error(s), 19 Warning(s).
+Program Size: Code=34408 RO-data=656 RW-data=476 ZI-data=6244  
+"STM32L053R8_NUCLEO\STM32L053R8_NUCLEO.axf" - 0 Error(s), 15 Warning(s).
 
 <h2>Software Packages used:</h2>
 

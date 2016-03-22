@@ -19,6 +19,8 @@ __IO uint32_t uwADCxConvertedValue = 0;
 const uint8_t num_ch = 4;
 uint16_t adc_result[num_ch];
 
+int32_t dif_adc_result[2];
+
 void ADC_Init()
 {
 	  /* ADC1 Periph clock enable */
@@ -136,9 +138,12 @@ void ADC_Task()
 	}
 }
 
-uint16_t * Get_ADC_Data()
+int32_t * Get_ADC_Data()
 {
-	return 	adc_result;
+	dif_adc_result[0] = adc_result[1] - adc_result[0];
+	dif_adc_result[1] = adc_result[3] - adc_result[2];
+	
+	return 	dif_adc_result;
 }
 
 

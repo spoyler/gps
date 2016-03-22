@@ -130,7 +130,7 @@ void sim900_send_char(const char c)
 
 void sim900_send_cmd(const char* cmd, int size)
 {
-  for(int i=0; /*i<size ||*/ cmd[i] != 0; i++)
+  for(int i=0; i < size; i++)
     {
         sim900_send_byte(cmd[i]);
     }
@@ -192,7 +192,7 @@ boolean sim900_wait_for_resp(const char* resp, DataType type)
 
 boolean sim900_check_with_cmd(const char* cmd, const char *resp, DataType type)
 {
-    sim900_send_cmd(cmd, 0);
+    sim900_send_cmd(cmd, strlen(cmd));
     return sim900_wait_for_resp(resp,type);
 }
 

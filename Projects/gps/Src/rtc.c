@@ -9,6 +9,13 @@
 #include "debug.h"
 #include "gps.h"
 
+
+const uint32_t START_YEAR = 1970;
+const uint32_t BASE_YEAR = 2000;
+const uint8_t month_day[] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
+const uint16_t week_day[] = {0x4263, 0xA8BD, 0x42BF, 0x4370, 0xABBF, 0xA8BF, 0x43B2};
+
+
 uint32_t last_time_tick = 0;
 /* RTC handler declaration */
 RTC_HandleTypeDef RtcHandle; 
@@ -351,8 +358,59 @@ void RTC_CalendarSet(char * gps_msg)
 
 		
 		//
-//		RTC_CalendarShow();
+		//RTC_CalendarShow();
 	}
+}
+
+
+uint8_t calendar_check_leap(uint16_t year)
+{
+	if ((year % 400) == 0){
+		return 1;
+	}else if ((year % 100) == 0){
+		return 0;
+	}else if ((year % 4) == 0){
+		return 1;
+	}else{
+		return 0;
+	}
+}
+
+// Convert CalendarTypeDef -> uint32_t
+uint32_t calendar_coder(void)
+{
+  RTC_DateTypeDef date;
+  RTC_TimeTypeDef time;
+  
+  /* Get the RTC current Time */
+  HAL_RTC_GetTime(&RtcHandle, &time, RTC_FORMAT_BIN);
+  /* Get the RTC current Date */
+  HAL_RTC_GetDate(&RtcHandle, &date, RTC_FORMAT_BIN);
+	
+  unsigned int tmp = 0;
+	int i;
+	//calendar->year -= START_YEAR;
+	for (i = 0; i < (uint16_t)date.Year + (BASE_YEAR - START_YEAR); i++){
+		if (calendar_check_leap(i + START_YEAR))
+			tmp += 366*24*3600;
+		else
+			tmp += 365*24*3600;
+	}
+	for (i = 0; i < date.Month - 1; i++){
+		if (calendar_check_leap(date.Year + BASE_YEAR)){
+			if (i != 1)
+				tmp += 24 * 3600 * month_day[i];
+			else
+				tmp += 24 * 3600 * (month_day[i] + 1);
+		}
+		else
+			tmp += 24 * 3600 * month_day[i];
+	}
+	tmp += (date.Date - 1) * 24 * 3600;
+
+	tmp += time.Hours * 3600;
+	tmp += time.Minutes * 60;
+	return tmp + time.Seconds;
 }
 
 void RTC_Task()
@@ -361,6 +419,7 @@ void RTC_Task()
 	char * ptr_gps_msg = (char *)Get_GPS_Message(ZDA);
 	if (ptr_gps_msg != nullptr)
 	{
+		Reset_Message_Status(ZDA);
 		RTC_CalendarSet(ptr_gps_msg);
 	}	
 	

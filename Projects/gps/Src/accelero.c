@@ -15,6 +15,9 @@ static void *GYRO_handle = NULL;
 volatile uint8_t mems_int1_detected = 0;
 volatile uint8_t mems_int2_detected = 0;
 volatile uint8_t state = 0;
+volatile uint8_t return_state = 0;
+volatile uint8_t free_fall_detect = 0;
+
 				 
 SensorAxesRaw_t acc_data;
 SensorAxesRaw_t gyro_data;
@@ -44,7 +47,7 @@ void ACCELERO_Init()
 }
 
 
-int Accelero_Task()
+void Accelero_Task()
 {
 	uint8_t  status = 0;
 	GYRO_Drv_t *driver_gyro = NULL;
@@ -56,6 +59,7 @@ int Accelero_Task()
 		{
 			if ( status != 0 )
 			{
+				free_fall_detect = 1;
 				DEBUG_PRINTF("Free Fall Detection!!!!\r\n");
 			}
 		}
@@ -66,15 +70,19 @@ int Accelero_Task()
 		mems_int1_detected = 0;
 		{	
 			RTC_CalendarShow();
-			state = !state;
-			if (state){
+			return_state = state;
+
+			if (return_state)
+			{
 				DEBUG_PRINTF("Active state\r\n");
 			}
-			else {				
+			else 
+			{				
 				DEBUG_PRINTF("Sleep state\r\n");
 			}
 		}
 	}
+	
 	
 	
 
@@ -102,10 +110,7 @@ int Accelero_Task()
 		DEBUG_PRINTF("acc_data_z = %d\r\n", acc_data.AXIS_Z);
 */		
 	}
-	
-	return state;
 }
-
 
 
 SensorAxesRaw_t * Get_ACC_Data()
@@ -120,15 +125,25 @@ SensorAxesRaw_t * Get_GYRO_Data()
 
 uint8_t Get_Accelero_State()
 {
-	return state;
+	return return_state;
+}
+
+uint8_t Get_Free_Fall_State()
+{
+	uint8_t ret_value = free_fall_detect;
+	
+	if (free_fall_detect)
+		free_fall_detect = 0;
+	
+	return ret_value;	
 }
 
 void HAL_GPIO_EXTI_Callback( uint16_t GPIO_Pin )
 {
 	if ( GPIO_Pin == M_INT1_PIN )
   {
-		//state = !state;
 		mems_int1_detected = 1;
+		state = !state;
   }
 	else
 		if (GPIO_Pin == M_INT2_PIN)

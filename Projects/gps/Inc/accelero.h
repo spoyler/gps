@@ -14,7 +14,8 @@
 
 void ACCELERO_Init();
 uint8_t Get_Accelero_State();
-int Accelero_Task();
+uint8_t Get_Free_Fall_State();
+void Accelero_Task();
 SensorAxesRaw_t * Get_ACC_Data();
 SensorAxesRaw_t * Get_GYRO_Data();
 

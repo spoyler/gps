@@ -12,13 +12,15 @@ char GPS_Calc_CRC(char * msg, int msg_size);
 void GPS_Send_Message(char * msg);
 void Set_Output_Msg(void);
 char * Get_GPS_Message(int message_type);
+void Reset_Message_Status(int message_type);
 
 #define nullptr 0
 
 enum {
 	GGA = 0,
 	ZDA = 1,
-	PMTK001 = 2
+	PMTK001 = 2,
+	RMC = 3
 };
 
 

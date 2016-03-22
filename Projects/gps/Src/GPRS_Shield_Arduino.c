@@ -36,11 +36,10 @@
 #include "gps.h"
 #include "accelero.h"
 #include "adc.h"
+#include "command.h"
 
 UART_HandleTypeDef UartGSM;			// gsm uart
 
-
-char data[512];
 
 uint32_t str_to_ip(const char* str);
 uint32_t _ip;
@@ -49,9 +48,8 @@ const char resp_ok[] = "OK\r\n";
 
 const char host_name[] = "paulfertser.info";
 const int host_port = 10123;
-const char vtuin[] = "$VTUIN,001";
-const char vtag[] = "$VTAG";
-const char volt[] = "$VOLT";
+
+uint8_t tmp_data[512];
 
 
 
@@ -141,13 +139,15 @@ void GSM_Init(void)//:gprsSerial(tx,rx)
 	while(!checkSIMStatus());
 	DEBUG_PRINTF("Ok\r\n");
 	
+	//debug_simm800(&UartGSM);
+	
 }
 
 void GSM_Task()
 {
 	char * ptr_gps_msg = 0;
-	// if state active then send data to the server
-	//if (Get_Accelero_State())
+
+	if (Get_Accelero_State())
 	{
 		if (!is_connected())
 		{
@@ -162,33 +162,42 @@ void GSM_Task()
 			}
 		}
 		else
-		{
-			ptr_gps_msg = (char *)Get_GPS_Message(GGA);
+		{			
+			// send the data
+			uint8_t * data = (uint8_t*)NULL;
+			uint32_t data_size = ReadBuffer(&data);
 			
-			SensorAxesRaw_t * acc_data = Get_ACC_Data();
-			SensorAxesRaw_t * gyro_data = Get_GYRO_Data();
-			uint16_t * adc_data = Get_ADC_Data();
-			
-			if (ptr_gps_msg != nullptr)
+			if ((data_size > 0) && data != NULL)
 			{
-				memset(data,0, 512);					
-				//int data_size = sprintf(data, "%s\r\n%s\r\n%s,%d,%d,%d,%d,%d,%d\r\n%s,%d,%d,%d,%d\r\n", 
-				int data_size = sprintf(data, "%s\r\n%s\r\n%s,%d,%d,%d,%d,%d,%d%s,%d,%d,%d,%d\r\n", 
-											 vtuin, 
-											 ptr_gps_msg, 
-											 vtag,
-											 acc_data->AXIS_X, acc_data->AXIS_Y, acc_data->AXIS_Z,
-											 gyro_data->AXIS_X, gyro_data->AXIS_Y,gyro_data->AXIS_Z,
-											 volt,
-											 adc_data[0], adc_data[1], adc_data[2], adc_data[3]);				
-				//sprintf(data, "%s\r\n", ptr_gps_msg);				
-				DEBUG_PRINTF("Data_send...");
+				DEBUG_PRINTF("Data send...");
 				if(send(data, data_size) != data_size)
 					DEBUG_PRINTF("Error\r\n");
 				else
 					DEBUG_PRINTF("Ok\r\n");
-				//DEBUG_PRINTF("%s", data);
 			}
+			
+			//recive data
+			data_size =  recv(tmp_data, 256);
+			DEBUG_PRINTF("RX_DATA = %d\r\n", data_size);
+			
+			uint8_t * answer = (uint8_t *) nullptr;
+			
+			data_size = ReadBufferAnsw(&answer);
+			
+			if (data_size > 0)
+			{
+				DEBUG_PRINTF("Send answer...");
+				if(send(answer, data_size) != data_size)
+					DEBUG_PRINTF("Error\r\n");
+				else
+					DEBUG_PRINTF("Ok\r\n");
+			}
+			
+			if (!Get_Accelero_State())
+			{
+				// close connection
+					close();
+			}						
 		}			
 	}
 }
@@ -210,12 +219,13 @@ void powerUpDown()
 }
   
 bool checkSIMStatus(void)
-{
+{	
+		const char cmd[] = "AT+CGREG?\r\n";
     char gprsBuffer[32];
     int count = 0;
     sim900_clean_buffer(gprsBuffer,32);
     while(count < 3) {
-        sim900_send_cmd("AT+CGREG?\r\n", sizeof("AT+CGREG?\r\n"));
+        sim900_send_cmd(cmd, strlen(cmd));
         sim900_read_buffer(gprsBuffer,32,DEFAULT_TIMEOUT);
         if((NULL != strstr(gprsBuffer,"+CGREG: 0,1"))
 				|| (NULL != strstr(gprsBuffer,"+CGREG: 0,5")))
@@ -415,8 +425,8 @@ bool callUp(char *number)
     //sprintf(cmd,"ATD%s;\r\n", number);
     //sim900_send_cmd(cmd);
 	sim900_send_cmd("ATD", sizeof("ATD"));
-	sim900_send_cmd(number, 0);
-	sim900_send_cmd(";\r\n", sizeof(";\r\n"));
+	sim900_send_cmd(number, strlen(number));
+	sim900_send_cmd(";\r\n", 3);
     return true;
 }
 
@@ -650,27 +660,33 @@ bool cancelUSSDSession(void)
 
 void disconnect()
 {
-    sim900_send_cmd("AT+CIPSHUT\r\n", sizeof("AT+CIPSHUT\r\n"));
+	const char cmd[] = "AT+CIPSHUT\r\n";
+  sim900_send_cmd(cmd, strlen(cmd));
 }
 
 bool connect(Protocol ptl,const char * host, int port, int timeout, int chartimeout)
 {
-    char cmd[128];
-    char resp[128];
-
+		const char manual_data_cmd[] = "AT+CIPRXGET=1\r\n";
+    char cmd[128] = {0};
+    char resp[128] = {0};
+		uint32_t size = 0;
+		
+		if(!sim900_check_with_cmd(manual_data_cmd, "OK\r\n", CMD))
+			return false;
+		
     //sim900_clean_buffer(cmd,64);
     if(ptl == TCP) {
-      sprintf(cmd, "AT+CIPSTART=\"TCP\",\"%s\",%d\r\n",host, port);
+      size = sprintf(cmd, "AT+CIPSTART=\"TCP\",\"%s\",%d\r\n",host, port);
     } 
 		else 
 			if(ptl == UDP) {
-        sprintf(cmd, "AT+CIPSTART=\"UDP\",\"%s\",%d\r\n",host, port);
+        size = sprintf(cmd, "AT+CIPSTART=\"UDP\",\"%s\",%d\r\n",host, port);
     } else {
         return false;
     }
     
 
-    sim900_send_cmd(cmd, 128);
+    sim900_send_cmd(cmd, size);
     sim900_read_buffer(resp, 128, timeout);
     if((strstr(resp,"CONNECT OK") != NULL) ||
 			 (strstr(resp, "ALREADY CONNECT") != NULL))	
@@ -682,8 +698,8 @@ bool connect(Protocol ptl,const char * host, int port, int timeout, int chartime
 
 bool is_connected(void)
 {
-    char resp[96];
-    sim900_send_cmd("AT+CIPSTATUS\r\n", sizeof("AT+CIPSTATUS\r\n"));
+    char resp[96] = {0};
+    sim900_send_cmd("AT+CIPSTATUS\r\n", strlen("AT+CIPSTATUS\r\n"));
     sim900_read_buffer(resp,sizeof(resp),DEFAULT_TIMEOUT);
     if(NULL != strstr(resp,"STATE: CONNECT OK")) {
         //+STATE: CONNECT OK
@@ -722,7 +738,7 @@ int wait_writeable(int req_size)
 int send(const char * str, int len)
 {
 	const uint32_t wait_data_ok = 1000;
-  char cmd[64] = {0};
+  char cmd[256] = {0};
 	if(len > 0)
 	{
 		sprintf(cmd,"AT+CIPSEND=%d\r\n",len);
@@ -752,9 +768,61 @@ int send(const char * str, int len)
 
 int recv(char* buf, int len)
 {
-    sim900_clean_buffer(buf,len);
-    sim900_read_buffer(buf,len,DEFAULT_TIMEOUT);   //Ya he llamado a la funcion con la longitud del buffer - 1 y luego le estoy añadiendo el 0
-    return strlen(buf);
+	
+	/*
+		AT+CIPRXGET=2,1460
+	+CIPRXGET:2,11,0
+	HELLOW WORLD
+	
+	OK
+	+CIPRXGET:1
+	*/
+	char cmd[32] = {0};
+	int overheads = 64;	
+			
+	sim900_clean_buffer(buf,len);	
+	int size = sprintf(cmd, "AT+CIPRXGET=2,%d\r\n", len);
+	sim900_send_cmd(cmd, size);
+	sim900_read_buffer(buf, len + overheads,DEFAULT_TIMEOUT);
+	
+	char * ptr = nullptr;
+	
+	ptr = strstr(buf, "+CIPRXGET: 2,");
+	
+	if (ptr != nullptr)
+	{
+		ptr += strlen("+CIPRXGET: 2,");
+		
+		char * end_ptr =  (char *)strchr(ptr, ',');
+		
+		if (end_ptr != nullptr)
+		{
+			char number[8] = {0};		
+			int size = (uint32_t)end_ptr - (uint32_t)(ptr);
+			size = size < 8 ? size : 8;
+			strncpy ( number, ptr, size );
+			
+			char * data = strstr(end_ptr, "\r\n");
+			
+			if (data != nullptr)
+			{
+				data += strlen("\r\n");
+				
+				int num_recv_byte = atoi(number);
+				
+				//num_recv_byte = sprintf(data, "$CMD,W,0,1\r\n");
+				
+				if ((num_recv_byte > 0) && (num_recv_byte <= len))
+				{
+					memcpy(buf, data, num_recv_byte);
+					Parse_Command(buf, num_recv_byte);
+					return num_recv_byte;				
+				}
+			}
+		}		
+	}
+
+	return -1;
 }
 
 void listen(void)

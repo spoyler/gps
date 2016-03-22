@@ -24,6 +24,7 @@
 #include "gps.h"
 #include "accelero.h"
 #include "adc.h"
+#include "command.h"
 
 
 /** @defgroup IHM04A1_Example_for_4_Unidirectionnal_motors
@@ -66,23 +67,22 @@ int main(void)
 	//	
 	RTC_Init();
 	//
+	ADC_Init();
+	//
 	GPS_Init();
 	// Init GSM
 	GSM_Init();
+	//
+	Command_Init();
 	
-	ADC_Init();
-
+	
 	while(1)
 	{
-		if (Accelero_Task()){
-			GSM_Task();
-			RTC_Task();
-			ADC_Task();
-		}
-		else
-		{
-			
-		}
+		Accelero_Task();
+		RTC_Task();
+		ADC_Task();
+		GSM_Task();
+		Command_Task();
 	}
 }
 

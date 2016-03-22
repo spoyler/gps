@@ -32,6 +32,7 @@
 "stm32l053r8_nucleo\gps.o"
 "stm32l053r8_nucleo\accelero.o"
 "stm32l053r8_nucleo\adc.o"
+"stm32l053r8_nucleo\command.o"
 "stm32l053r8_nucleo\lsm6ds3_acc_gyro_driver.o"
 "stm32l053r8_nucleo\lsm6ds3_acc_gyro_driver_hl.o"
 "stm32l053r8_nucleo\x_nucleo_iks01a1.o"

@@ -12,11 +12,11 @@
 UART_HandleTypeDef UartGPS;			// gps uart
 
 
-#define MAX_MAX_COMMAND		 3	
-#define GPS_MAX_MESSAGE_SIZE 256
+#define MAX_MAX_COMMAND		 		4
+#define GPS_MAX_MESSAGE_SIZE 	256
 
 //
-const char gps_answers[MAX_MAX_COMMAND][32] = {{"GGA"}, {"ZDA"},{"PMTK001"}};
+const char gps_answers[MAX_MAX_COMMAND][32] = {{"GGA"}, {"ZDA"}, {"PMTK001"}, {"RMC"}};
 char gps_messages[MAX_MAX_COMMAND][GPS_MAX_MESSAGE_SIZE];
 //
 uint32_t messages_bit_status = 0;
@@ -67,11 +67,13 @@ void Set_Output_Msg()
 	int msg_pos = 0;
 		
 	char dont_use = 0;
-	char gga_pos = 3; // pos 3
+	char rmc_pos = 1;
+	char gga_pos = 3; 	// pos 3
 	char zda_pos = 17;	// pos 17
 	
 	char output_msg_state[19] = {0};
 	
+	output_msg_state[rmc_pos] = 1;
 	output_msg_state[gga_pos] = 1;
 	output_msg_state[zda_pos] = 5;
 	
@@ -156,20 +158,20 @@ void USART1_IRQHandler(void)
 				
 		if (gps_message_index > 0)
 		{
-			if (   gps_tmp_string[gps_message_index - 1] 	== '\r'
-				&& gps_tmp_string[gps_message_index] 		== '\n')
+			if ( gps_tmp_string[gps_message_index - 1] 	== '\r'
+				&& gps_tmp_string[gps_message_index] 		  == '\n')
 			{
 				for (int i = 0; i < MAX_MAX_COMMAND; ++i)
 				{
 					if (strstr(gps_tmp_string, &gps_answers[i][0]) != 0)
 					{
+						//DEBUG_PRINTF("%s\r\n",gps_tmp_string);
 						memset(&gps_messages[i][0], 0, GPS_MAX_MESSAGE_SIZE);
 						memcpy(&gps_messages[i][0], gps_tmp_string, gps_message_index - 1);
 						memset(gps_tmp_string, 0, GPS_MAX_MESSAGE_SIZE);
 						
 						// set true status
 						messages_bit_status |= 1 << i;
-					//	gps_message_recived = 1;
 					}
 				}				
 				
@@ -187,10 +189,16 @@ char * Get_GPS_Message(int message_type)
 	if (messages_bit_status & (1 << message_type))
 	{
 		// clear bit
-		messages_bit_status &= ~(messages_bit_status | (1 << message_type));
+		//messages_bit_status &= ~(messages_bit_status | (1 << message_type));
 		// return pointer to the message
 		return &gps_messages[message_type][0];				
 	}
 	return nullptr;
+}
+
+void Reset_Message_Status(int message_type)
+{
+	// clear bit
+	messages_bit_status &= ~(messages_bit_status | (1 << message_type));
 }
 

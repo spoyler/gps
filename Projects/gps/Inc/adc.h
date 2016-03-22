@@ -8,9 +8,9 @@
 
 #include "stm32l0xx_hal.h"
 
-void ADC_Init();
-void ADC_Task();
-uint16_t * Get_ADC_Data();
+void ADC_Init(void);
+void ADC_Task(void);
+int32_t * Get_ADC_Data(void);
 
 
 #endif
