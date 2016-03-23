@@ -5,6 +5,7 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <stdarg.h>
 
 #include "command.h"
 #include "debug.h"
@@ -12,7 +13,6 @@
 #include "gps.h"
 #include "adc.h"
 #include "rtc.h"
-
 
 const uint32_t buffer_size = 8;
 const uint32_t buffer_lenght = 256;
@@ -94,7 +94,7 @@ void Command_Init()
 	last_tick = HAL_GetTick();
 }
 
-uint32_t PushToBuffer(void * data, uint32_t size, uint32_t param)
+uint32_t PushToBuffer(uint32_t param, const char * string, ...  )
 {
 	if (param == CLEAR)
 	{
@@ -102,10 +102,12 @@ uint32_t PushToBuffer(void * data, uint32_t size, uint32_t param)
 		memset(&buffer.data[buffer.head],0, buffer_lenght);
 	}
 	
-	if ((buffer_lenght - buffer.buffer_pos) >= size)
+	uint32_t free_space = buffer_lenght - buffer.buffer_pos;
 	{
-		memcpy(&buffer.data[buffer.head][buffer.buffer_pos], data, size);
-		buffer.buffer_pos += size;
+		va_list args;
+    va_start (args, string);
+		buffer.buffer_pos += vsnprintf(&buffer.data[buffer.head][buffer.buffer_pos], free_space, string,  args);
+		va_end(args);
 		
 		if (param == CMD_END)
 		{
@@ -114,10 +116,6 @@ uint32_t PushToBuffer(void * data, uint32_t size, uint32_t param)
 		}
 		
 		return 0;
-	}
-	else
-	{
-		return -1;
 	}
 }
 
@@ -226,58 +224,38 @@ void Command_Task()
 				SensorAxesRaw_t * gyro_data = Get_GYRO_Data();
 				int32_t * adc_data = Get_ADC_Data();
 				
-				int32_t motion_data[6];
-				
-				motion_data[0] = acc_data->AXIS_X;
-				motion_data[1] = acc_data->AXIS_Y;
-				motion_data[2] = acc_data->AXIS_Z;
-				
-				motion_data[3] = gyro_data->AXIS_X;
-				motion_data[4] = gyro_data->AXIS_Y;
-				motion_data[5] = gyro_data->AXIS_Z;
-				
 				// set uin---------------------------------------------------------------
-				PushToBuffer((void *)uin, sizeof(uin)-1, CLEAR);
-				PushToBuffer((void *)&system_info, /*sizeof(system_info)*/ 6, CMD_END);
+				PushToBuffer(CLEAR, "%s,%d,%d,%d\r\n", uin, system_info.tracker_id, system_info.sw_version, system_info.hw_version);
 				
 				// set tmark-------------------------------------------------------------
-				PushToBuffer((void*)tmark, sizeof(tmark) - 1, NO_ACTION);
-				
 				// get time
-				uint32_t time = calendar_coder();
-				
 				// copy seconds
-				PushToBuffer(&time, sizeof(time), NO_ACTION);
-				
-				// copy subseconds
-				uint16_t sub_sec = 0;
-				PushToBuffer(&sub_sec, sizeof(uint16_t), NO_ACTION);
-				
 				// copy packet naumber
+				// copy packet naumber
+				uint32_t time = calendar_coder();
+				uint16_t sub_sec = 0;
 				packet_number++;
-				PushToBuffer(&packet_number, sizeof(packet_number), CMD_END);						
+				PushToBuffer(NO_ACTION, "%s,%d,%d,%d\r\n", tmark, time, sub_sec, packet_number );
 				
 				// set gga---------------------------------------------------------------			
-				PushToBuffer((void *)gps_gga, strlen(gps_gga), CMD_END);
+				PushToBuffer(NO_ACTION, "%s\r\n", gps_gga);
 				
 				// set rmc---------------------------------------------------------------
-				PushToBuffer((void *)gps_rmc, strlen(gps_rmc), CMD_END);
+				PushToBuffer(NO_ACTION, "%s\r\n", gps_rmc);
 				
 				// set motion state------------------------------------------------------
-				PushToBuffer((void *)ag, sizeof(ag) - 1, NO_ACTION);
-				PushToBuffer((void *)motion_data, sizeof(motion_data[1])*6, CMD_END);
+				PushToBuffer(NO_ACTION, "%s,%d,%d,%d,%d,%d,%d\r\n", ag, acc_data->AXIS_X, acc_data->AXIS_Y, acc_data->AXIS_X,
+																					gyro_data->AXIS_X, gyro_data->AXIS_Y, gyro_data->AXIS_Z);
 				
 				// set event state-------------------------------------------------------
-				PushToBuffer((void *)event, sizeof(event) - 1, NO_ACTION);
-				PushToBuffer((void *)&free_fall_state, sizeof(uint8_t) - 1, CMD_END);
+				PushToBuffer(NO_ACTION, "%s,%d\r\n", event, free_fall_state);
 				
 				// set adc result--------------------------------------------------------
-				PushToBuffer((void *)volt, sizeof(volt) - 1, NO_ACTION);
-				PushToBuffer((void *)adc_data, sizeof(int32_t)*2, CMD_END);
+				PushToBuffer(NO_ACTION, "%s,%d,%d\r\n", volt, adc_data[0], adc_data[1]);
 				
 				// push end of file cmd -------------------------------------------------
-				PushToBuffer((void *)eof, sizeof(eof) - 1, CMD_END);	
-					
+				PushToBuffer(NO_ACTION, "%s\r\n", eof);	
+
 				EndBufferWrite();
 			}
 		}
