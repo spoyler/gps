@@ -248,10 +248,10 @@ void Command_Task()
 																					gyro_data->AXIS_X, gyro_data->AXIS_Y, gyro_data->AXIS_Z);
 				
 				// set event state-------------------------------------------------------
-				PushToBuffer(NO_ACTION, "%s,%d\r\n", event, free_fall_state);
+				PushToBuffer(NO_ACTION, "%s,%d,0\r\n", event, free_fall_state);
 				
 				// set adc result--------------------------------------------------------
-				PushToBuffer(NO_ACTION, "%s,%d,%d\r\n", volt, adc_data[0], adc_data[1]);
+				PushToBuffer(NO_ACTION, "%s,%d,%d\r\n", volt, abs(adc_data[0]), abs(adc_data[1]));
 				
 				// push end of file cmd -------------------------------------------------
 				PushToBuffer(NO_ACTION, "%s\r\n", eof);	
