@@ -139,6 +139,9 @@ void GSM_Init(void)//:gprsSerial(tx,rx)
 	while(!checkSIMStatus());
 	DEBUG_PRINTF("Ok\r\n");
 	
+	const char manual_data_cmd[] = "AT+CIPRXGET=1\r\n";	
+	sim900_check_with_cmd(manual_data_cmd, "OK\r\n", CMD);
+		
 	//debug_simm800(&UartGSM);
 	
 }
@@ -152,7 +155,7 @@ void GSM_Task()
 		if (!is_connected())
 		{
 			DEBUG_PRINTF("Connecting to %s:%d... ", host_name, host_port);
-			if (connect(TCP,host_name, host_port, 2, 100))
+			if (connect(TCP,host_name, host_port, 3, 100))
 			{
 				DEBUG_PRINTF("Ok\r\n");
 			}
@@ -666,14 +669,11 @@ void disconnect()
 
 bool connect(Protocol ptl,const char * host, int port, int timeout, int chartimeout)
 {
-		const char manual_data_cmd[] = "AT+CIPRXGET=1\r\n";
     char cmd[128] = {0};
     char resp[128] = {0};
-		uint32_t size = 0;
-		
-		if(!sim900_check_with_cmd(manual_data_cmd, "OK\r\n", CMD))
-			return false;
-		
+	uint32_t size = 0;
+
+
     //sim900_clean_buffer(cmd,64);
     if(ptl == TCP) {
       size = sprintf(cmd, "AT+CIPSTART=\"TCP\",\"%s\",%d\r\n",host, port);

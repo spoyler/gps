@@ -3,11 +3,11 @@
 <title>Static Call Graph - [STM32L053R8_NUCLEO\STM32L053R8_NUCLEO.axf]</title></head>
 <body><HR>
 <H1>Static Call Graph for image STM32L053R8_NUCLEO\STM32L053R8_NUCLEO.axf</H1><HR>
-<BR><P>#&#060CALLGRAPH&#062# ARM Linker, 5060061: Last Updated: Fri Mar 25 14:58:51 2016
+<BR><P>#&#060CALLGRAPH&#062# ARM Linker, 5060061: Last Updated: Tue Mar 29 22:07:16 2016
 <BR><P>
-<H3>Maximum Stack Usage =        896 bytes + Unknown(Cycles, Untraceable Function Pointers)</H3><H3>
+<H3>Maximum Stack Usage =        880 bytes + Unknown(Cycles, Untraceable Function Pointers)</H3><H3>
 Call chain for Maximum Stack Depth:</H3>
-main &rArr; GSM_Task &rArr; connect &rArr; sim900_check_with_cmd &rArr; sim900_wait_for_resp &rArr; millis
+main &rArr; GSM_Task &rArr; send &rArr; sim900_check_with_cmd &rArr; sim900_wait_for_resp &rArr; millis
 <P>
 <H3>
 Mutually Recursive functions
@@ -719,8 +719,8 @@ Global Symbols
 <BR>[Called By]<UL><LI><a href="#[c2]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Set_Output_Msg
 </UL>
 
-<P><STRONG><a name="[c5]"></a>GSM_Init</STRONG> (Thumb, 354 bytes, Stack size 16 bytes, gprs_shield_arduino.o(i.GSM_Init))
-<BR><BR>[Stack]<UL><LI>Max Depth = 592<LI>Call Chain = GSM_Init &rArr; sim900_check_with_cmd &rArr; sim900_wait_for_resp &rArr; millis
+<P><STRONG><a name="[c5]"></a>GSM_Init</STRONG> (Thumb, 372 bytes, Stack size 32 bytes, gprs_shield_arduino.o(i.GSM_Init))
+<BR><BR>[Stack]<UL><LI>Max Depth = 608<LI>Call Chain = GSM_Init &rArr; sim900_check_with_cmd &rArr; sim900_wait_for_resp &rArr; millis
 </UL>
 <BR>[Calls]<UL><LI><a href="#[c1]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_NVIC_EnableIRQ
 <LI><a href="#[95]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_Delay
@@ -736,7 +736,7 @@ Global Symbols
 </UL>
 
 <P><STRONG><a name="[ca]"></a>GSM_Task</STRONG> (Thumb, 204 bytes, Stack size 24 bytes, gprs_shield_arduino.o(i.GSM_Task))
-<BR><BR>[Stack]<UL><LI>Max Depth = 896<LI>Call Chain = GSM_Task &rArr; connect &rArr; sim900_check_with_cmd &rArr; sim900_wait_for_resp &rArr; millis
+<BR><BR>[Stack]<UL><LI>Max Depth = 880<LI>Call Chain = GSM_Task &rArr; send &rArr; sim900_check_with_cmd &rArr; sim900_wait_for_resp &rArr; millis
 </UL>
 <BR>[Calls]<UL><LI><a href="#[d0]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ReadBufferAnsw
 <LI><a href="#[cd]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ReadBuffer
@@ -2345,12 +2345,11 @@ Global Symbols
 <BR>[Called By]<UL><LI><a href="#[ca]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;GSM_Task
 </UL>
 
-<P><STRONG><a name="[cc]"></a>connect</STRONG> (Thumb, 160 bytes, Stack size 296 bytes, gprs_shield_arduino.o(i.connect))
-<BR><BR>[Stack]<UL><LI>Max Depth = 872<LI>Call Chain = connect &rArr; sim900_check_with_cmd &rArr; sim900_wait_for_resp &rArr; millis
+<P><STRONG><a name="[cc]"></a>connect</STRONG> (Thumb, 144 bytes, Stack size 296 bytes, gprs_shield_arduino.o(i.connect))
+<BR><BR>[Stack]<UL><LI>Max Depth = 344<LI>Call Chain = connect &rArr; sim900_read_buffer &rArr; millis
 </UL>
 <BR>[Calls]<UL><LI><a href="#[18d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;sim900_send_cmd
 <LI><a href="#[18e]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;sim900_read_buffer
-<LI><a href="#[c8]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;sim900_check_with_cmd
 <LI><a href="#[16b]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;strstr
 <LI><a href="#[173]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_memclr4
 <LI><a href="#[17c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__2sprintf
@@ -2383,7 +2382,7 @@ Global Symbols
 </UL>
 
 <P><STRONG><a name="[69]"></a>main</STRONG> (Thumb, 80 bytes, Stack size 0 bytes, main.o(i.main))
-<BR><BR>[Stack]<UL><LI>Max Depth = 896<LI>Call Chain = main &rArr; GSM_Task &rArr; connect &rArr; sim900_check_with_cmd &rArr; sim900_wait_for_resp &rArr; millis
+<BR><BR>[Stack]<UL><LI>Max Depth = 880<LI>Call Chain = main &rArr; GSM_Task &rArr; send &rArr; sim900_check_with_cmd &rArr; sim900_wait_for_resp &rArr; millis
 </UL>
 <BR>[Calls]<UL><LI><a href="#[e1]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_NVIC_SetPriority
 <LI><a href="#[dc]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_Init
@@ -2469,7 +2468,6 @@ Global Symbols
 <LI><a href="#[c4]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;strlen
 </UL>
 <BR>[Called By]<UL><LI><a href="#[ce]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;send
-<LI><a href="#[cc]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;connect
 <LI><a href="#[d1]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;close
 <LI><a href="#[c5]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;GSM_Init
 </UL>

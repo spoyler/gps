@@ -5,10 +5,10 @@
 <h2>Tool Versions:</h2>
 IDE-Version: µVision V5.18.0.0
 Copyright (C) 2016 ARM Ltd and ARM Germany GmbH. All rights reserved.
-License Information: asidorov asidovo, aaa, LIC=----
+License Information: a a, a, LIC=GE7Z9-4RYM0-XAPDC-7RXSQ-7LG2A-CICD3
  
 Tool Versions:
-Toolchain:       MDK-Lite  Version: 5.18
+Toolchain:       MDK-ARM Professional  Version: 5.18
 Toolchain Path:  C:\Keil_v5\ARM\ARMCC\Bin
 C Compiler:      Armcc.exe V5.06 update 1 (build 61)
 Assembler:       Armasm.exe V5.06 update 1 (build 61)
@@ -21,17 +21,21 @@ Target DLL:      STLink\ST-LINKIII-KEIL_SWO.dll V2.0.18.0
 Dialog DLL:      TARMCM1.DLL V1.9.0.0
  
 <h2>Project:</h2>
-D:\prj\GPS\gps\gps\Projects\gps\MDK-ARM\STM32L053R8-Nucleo\Project.uvprojx
-Project File Date:  03/25/2016
+C:\Users\‡‰ÏËÌ\Documents\projects\gps\gps\Projects\gps\MDK-ARM\STM32L053R8-Nucleo\Project.uvprojx
+Project File Date:  03/23/2016
 
 <h2>Output:</h2>
 *** Using Compiler 'V5.06 update 1 (build 61)', folder: 'C:\Keil_v5\ARM\ARMCC\Bin'
 Build target 'STM32L051_NUCLEO'
-compiling command.c...
-..\..\Inc\command.h(19): warning:  #1295-D: Deprecated declaration Command_Init - give arg types
-  void Command_Init();
-..\..\Inc\command.h(20): warning:  #1295-D: Deprecated declaration Command_Task - give arg types
-  void Command_Task();
+compiling GPRS_Shield_Arduino.c...
+..\..\Inc\GPRS_Shield_Arduino.h(52): warning:  #1295-D: Deprecated declaration GSM_Task - give arg types
+                void GSM_Task();
+..\..\Inc\GPRS_Shield_Arduino.h(58): warning:  #1295-D: Deprecated declaration GSM_Init - give arg types
+                void GSM_Init();    
+..\..\Inc\GPRS_Shield_Arduino.h(73): warning:  #1295-D: Deprecated declaration powerUpDown - give arg types
+      void powerUpDown();
+..\..\Inc\GPRS_Shield_Arduino.h(297): warning:  #1295-D: Deprecated declaration GetMoney - give arg types
+                void GetMoney();
 ..\..\Inc\debug.h(12): warning:  #1295-D: Deprecated declaration InitDebugUart - give arg types
   int InitDebugUart();
 ..\..\Inc\accelero.h(15): warning:  #1295-D: Deprecated declaration ACCELERO_Init - give arg types
@@ -48,23 +52,54 @@ compiling command.c...
   SensorAxesRaw_t * Get_GYRO_Data();
 ..\..\Inc\accelero.h(23): warning:  #1-D: last line of file ends without a newline
   #endif
-..\..\Inc\rtc.h(25): warning:  #1295-D: Deprecated declaration RTC_Task - give arg types
-  void RTC_Task();
-..\..\Src\command.c(109): warning:  #167-D: argument of type "uint8_t *" is incompatible with parameter of type "char *restrict"
-  		buffer.buffer_pos += vsnprintf(&buffer.data[buffer.head][buffer.buffer_pos], free_space, string,  args);
-..\..\Src\command.c(171): warning:  #68-D: integer conversion resulted in a change of sign
-  		return -1;
-..\..\Src\command.c(254): warning:  #223-D: function "abs" declared implicitly
-  				PushToBuffer(NO_ACTION, "%s,%d,%d\r\n", volt, abs(adc_data[0]), abs(adc_data[1]));
-..\..\Src\command.c(221): warning:  #177-D: variable "size" was declared but never referenced
-  				int size = 0;
-..\..\Src\command.c(297): warning:  #223-D: function "atoi" declared implicitly
-  			reg = atoi(number);
-..\..\Src\command.c: 16 warnings, 0 errors
+..\..\Inc\command.h(19): warning:  #1295-D: Deprecated declaration Command_Init - give arg types
+  void Command_Init();
+..\..\Inc\command.h(20): warning:  #1295-D: Deprecated declaration Command_Task - give arg types
+  void Command_Task();
+..\..\Src\GPRS_Shield_Arduino.c(176): warning:  #167-D: argument of type "uint8_t *" is incompatible with parameter of type "const char *"
+                                if(send(data, data_size) != data_size)
+..\..\Src\GPRS_Shield_Arduino.c(183): warning:  #167-D: argument of type "uint8_t *" is incompatible with parameter of type "char *"
+                        data_size =  recv(tmp_data, 256);
+..\..\Src\GPRS_Shield_Arduino.c(193): warning:  #167-D: argument of type "uint8_t *" is incompatible with parameter of type "const char *"
+                                if(send(answer, data_size) != data_size)
+..\..\Src\GPRS_Shield_Arduino.c(151): warning:  #177-D: variable "ptr_gps_msg" was declared but never referenced
+        char * ptr_gps_msg = 0;
+..\..\Src\GPRS_Shield_Arduino.c(327): warning:  #223-D: function "atoi" declared implicitly
+                  return atoi(s+1);
+..\..\Src\GPRS_Shield_Arduino.c(330): warning:  #68-D: integer conversion resulted in a change of sign
+              return -1; 
+..\..\Src\GPRS_Shield_Arduino.c(334): warning:  #68-D: integer conversion resulted in a change of sign
+      return -1;
+..\..\Src\GPRS_Shield_Arduino.c(613): warning:  #223-D: function "atoi" declared implicitly
+                *buffer = atoi(buffers);
+..\..\Src\GPRS_Shield_Arduino.c(672): warning:  #177-D: variable "manual_data_cmd" was declared but never referenced
+        const char manual_data_cmd[] = "AT+CIPRXGET=1\r\n";
+..\..\Src\GPRS_Shield_Arduino.c(812): warning:  #223-D: function "atoi" declared implicitly
+                                int num_recv_byte = atoi(number);
+..\..\Src\GPRS_Shield_Arduino.c(845): warning:  #223-D: function "atoi" declared implicitly
+          ip |= atoi(p);
+..\..\Src\GPRS_Shield_Arduino.c: 25 warnings, 0 errors
+compiling sim900.c...
+..\..\Src\sim900.c(73): warning:  #177-D: variable "c" was declared but never referenced
+        char c = 0;
+..\..\Src\sim900.c(86): warning:  #177-D: variable "chartimeout" was declared but never referenced
+        const int chartimeout = 500;
+..\..\Src\sim900.c(88): warning:  #550-D: variable "prevChar" was set but never used
+      unsigned long timerStart, prevChar;
+..\..\Src\sim900.c(163): warning:  #223-D: function "strlen" declared implicitly
+        int resp_size = strlen(resp);
+..\..\Src\sim900.c(186): warning:  #111-D: statement is unreachable
+        if(type == CMD)
+..\..\Src\sim900.c(159): warning:  #177-D: variable "chartimeout" was declared but never referenced
+        unsigned int chartimeout = 500;    
+..\..\Src\sim900.c(161): warning:  #177-D: variable "prevChar" was declared but never referenced
+        unsigned long timerStart, prevChar;    //prevChar is the time when the previous Char has been read.
+..\..\Src\sim900.c(195): warning:  #223-D: function "strlen" declared implicitly
+      sim900_send_cmd(cmd, strlen(cmd));
+..\..\Src\sim900.c: 8 warnings, 0 errors
 linking...
-STM32L053R8_NUCLEO\STM32L053R8_NUCLEO.axf: error: L6050U: The code size of this image (36076 bytes) exceeds the maximum allowed for this version of the linker.
-Finished: 0 information, 0 warning, 0 error and 1 fatal error messages.
-"STM32L053R8_NUCLEO\STM32L053R8_NUCLEO.axf" - 1 Error(s), 16 Warning(s).
+Program Size: Code=36096 RO-data=656 RW-data=476 ZI-data=6244  
+"STM32L053R8_NUCLEO\STM32L053R8_NUCLEO.axf" - 0 Error(s), 33 Warning(s).
 
 <h2>Software Packages used:</h2>
 
@@ -75,15 +110,14 @@ Package Vendor: ARM
    * Component: CORE Version: 4.3.0
 
 <h2>Collection of Component include folders:</h2>
-  D:\prj\GPS\gps\gps\Projects\gps\MDK-ARM\STM32L053R8-Nucleo\RTE
+  C:\Users\‡‰ÏËÌ\Documents\projects\gps\gps\Projects\gps\MDK-ARM\STM32L053R8-Nucleo\RTE
   C:\Keil_v5\ARM\PACK\ARM\CMSIS\4.5.0\CMSIS\Include
   C:\Keil_v5\ARM\PACK\Keil\STM32L0xx_DFP\1.4.0\Device\Include
 
 <h2>Collection of Component Files used:</h2>
 
    * Component: ARM::CMSIS:CORE:4.3.0
-Target not created.
-Build Time Elapsed:  00:00:01
+Build Time Elapsed:  00:00:03
 </pre>
 </body>
 </html>

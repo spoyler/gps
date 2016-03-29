@@ -155,7 +155,7 @@ void sim900_send_End_Mark(void)
 boolean sim900_wait_for_resp(const char* resp, DataType type)
 {
 	char str[512] = {0};
-	unsigned int timeout = 2000;
+	unsigned int timeout = 3000;
 	unsigned int chartimeout = 500;    
 	int sum = 0;
 	unsigned long timerStart, prevChar;    //prevChar is the time when the previous Char has been read.
