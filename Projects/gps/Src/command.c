@@ -24,7 +24,7 @@ typedef struct
 {
 	uint32_t head;
 	uint32_t tail;
-	uint32_t buffer_pos;
+	uint32_t buffer_pos[buffer_size];
 	uint8_t data[buffer_size][buffer_lenght];
 }SBuffer;
 
@@ -54,9 +54,12 @@ const char gprmc[] = "$GPRMC";
 const char ag		[] = "$AG";
 const char event[] = "$EVENT";
 const char volt	[] = "$VOLT";
-const char eof	[] = "$EOF";
+const char eof	[] = "$EOF\r\n";
 const char cmd	[] = "$CMD";
-const char ack	[] = "$ACK";
+const char ack	[] = "$ACK,0,0\r\n";
+
+char uin_string[32] = {0};
+uint8_t uin_string_size = 0;
 
 enum
 {
@@ -91,6 +94,9 @@ void Command_Init()
 	
 	ServerCommands[1] = 10;
 	
+	// set uin---------------------------------------------------------------
+	uin_string_size = sprintf(uin_string, "%s,%d,%d,%d\r\n", uin, system_info.tracker_id, system_info.sw_version, system_info.hw_version);
+	
 	last_tick = HAL_GetTick();
 }
 
@@ -98,25 +104,33 @@ uint32_t PushToBuffer(uint32_t param, const char * string, ...  )
 {
 	if (param == CLEAR)
 	{
-		buffer.buffer_pos = 0;
+		buffer.buffer_pos[buffer.head] = 0;
 		memset(&buffer.data[buffer.head],0, buffer_lenght);
 	}
 	
-	uint32_t free_space = buffer_lenght - buffer.buffer_pos;
+	uint32_t free_space = buffer_lenght - buffer.buffer_pos[buffer.head];
 	{
 		va_list args;
     va_start (args, string);
-		buffer.buffer_pos += vsnprintf(&buffer.data[buffer.head][buffer.buffer_pos], free_space, string,  args);
+		buffer.buffer_pos[buffer.head] += vsnprintf(&buffer.data[buffer.head][buffer.buffer_pos[buffer.head]], free_space, string,  args);
 		va_end(args);
 		
 		if (param == CMD_END)
 		{
-			buffer.data[buffer.head][buffer.buffer_pos++] = 0x10;
-			buffer.data[buffer.head][buffer.buffer_pos++] = 0x13;
+			buffer.data[buffer.head][buffer.buffer_pos[buffer.head]++] = 0x0d;
+			buffer.data[buffer.head][buffer.buffer_pos[buffer.head]++] = 0x0a;
 		}
 		
 		return 0;
 	}
+}
+
+uint8_t IsDataToSend()
+{
+	if (buffer.head == buffer.tail)
+		return 0;
+	else
+		return 1;
 }
 
 void EndBufferWrite()
@@ -131,11 +145,14 @@ void EndBufferWrite()
 
 uint32_t ReadBuffer(uint8_t ** pointer)
 {
+	uint32_t data_size = 0;
 	if (buffer.head != buffer.tail)
 	{
+		data_size = buffer.buffer_pos[buffer.tail];
 		*pointer = (uint8_t*)buffer.data[buffer.tail];
 		buffer.tail = (buffer.tail + 1) & (buffer_size - 1);
-		return buffer.buffer_pos;
+		
+		return data_size;
 	}	
 	else
 	{
@@ -160,8 +177,8 @@ uint32_t PushToAnswers(void * data, uint32_t size, uint32_t param)
 		
 		if (param == CMD_END)
 		{
-			answers.data[answers.head][answers.buffer_pos++] = 0x10;
-			answers.data[answers.head][answers.buffer_pos++] = 0x13;
+			answers.data[answers.head][answers.buffer_pos++] = 0x0d;
+			answers.data[answers.head][answers.buffer_pos++] = 0x0a;
 		}
 		
 		return 0;
@@ -225,7 +242,7 @@ void Command_Task()
 				int32_t * adc_data = Get_ADC_Data();
 				
 				// set uin---------------------------------------------------------------
-				PushToBuffer(CLEAR, "%s,%d,%d,%d\r\n", uin, system_info.tracker_id, system_info.sw_version, system_info.hw_version);
+				//PushToBuffer(CLEAR, "%s,%d,%d,%d\r\n", uin, system_info.tracker_id, system_info.sw_version, system_info.hw_version);
 				
 				// set tmark-------------------------------------------------------------
 				// get time
@@ -235,7 +252,7 @@ void Command_Task()
 				uint32_t time = calendar_coder();
 				uint16_t sub_sec = 0;
 				packet_number++;
-				PushToBuffer(NO_ACTION, "%s,%d,%d,%d\r\n", tmark, time, sub_sec, packet_number );
+				PushToBuffer(CLEAR, "%s,%d,%d,%d\r\n", tmark, time, sub_sec, packet_number );
 				
 				// set gga---------------------------------------------------------------			
 				PushToBuffer(NO_ACTION, "%s\r\n", gps_gga);
@@ -254,7 +271,7 @@ void Command_Task()
 				PushToBuffer(NO_ACTION, "%s,%d,%d\r\n", volt, abs(adc_data[0]), abs(adc_data[1]));
 				
 				// push end of file cmd -------------------------------------------------
-				PushToBuffer(NO_ACTION, "%s\r\n", eof);	
+				//PushToBuffer(NO_ACTION, "%s\r\n", eof);	
 
 				EndBufferWrite();
 			}
@@ -371,8 +388,6 @@ int Parse_Command(char * data, int size)
 		}
 	
 		PushToAnswers((void *)ack, sizeof(ack)-1, CLEAR);
-		PushToAnswers((void *)&error_code, sizeof(uint8_t), NO_ACTION);
-		PushToAnswers((void *)&value, sizeof(uint16_t), CMD_END);		
 		EndBufferWriteAnsw();
 		
 	}

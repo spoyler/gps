@@ -295,4 +295,6 @@ typedef enum {
     bool checkSIMStatus(void);
 		
 		void GetMoney();
+		
+		void GetSignalLevel();
 #endif

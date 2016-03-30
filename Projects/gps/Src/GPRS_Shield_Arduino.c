@@ -51,6 +51,11 @@ const int host_port = 10123;
 
 uint8_t tmp_data[512];
 
+uint8_t is_not_first_data_send = 0;
+extern char uin_string[32];
+extern uint8_t uin_string_size;
+extern const char eof[];
+
 
 
 void delay(int time)
@@ -134,6 +139,10 @@ void GSM_Init(void)//:gprsSerial(tx,rx)
 	DEBUG_PRINTF("Set GSM full functional...");
 	while(!sim900_check_with_cmd("AT+CFUN=1\r\n",resp_ok,CMD));
 	DEBUG_PRINTF("Ok\r\n");
+	
+	DEBUG_PRINTF("Get signal level...");
+	GetSignalLevel();
+	DEBUG_PRINTF("\r\n");
   
 	DEBUG_PRINTF("Check SIM status...");  
 	while(!checkSIMStatus());
@@ -153,11 +162,12 @@ void GSM_Task()
 	if (Get_Accelero_State())
 	{
 		if (!is_connected())
-		{
+		{			
 			DEBUG_PRINTF("Connecting to %s:%d... ", host_name, host_port);
 			if (connect(TCP,host_name, host_port, 3, 100))
 			{
 				DEBUG_PRINTF("Ok\r\n");
+				is_not_first_data_send = 0;
 			}
 			else
 			{
@@ -166,42 +176,90 @@ void GSM_Task()
 		}
 		else
 		{			
-			// send the data
-			uint8_t * data = (uint8_t*)NULL;
-			uint32_t data_size = ReadBuffer(&data);
-			
-			if ((data_size > 0) && data != NULL)
+			while(1) 
 			{
-				DEBUG_PRINTF("Data send...");
-				if(send(data, data_size) != data_size)
-					DEBUG_PRINTF("Error\r\n");
+				// send the data
+				uint8_t * data = (uint8_t*)NULL;
+				uint32_t data_size = ReadBuffer(&data);
+				
+			
+				if ((data_size > 0) && data != NULL)
+				{
+					if (!is_not_first_data_send)
+					{
+						// send uin
+						if(send(uin_string, uin_string_size) == uin_string_size)
+							is_not_first_data_send = 1;
+					}
+								
+					data[data_size] = 0;
+					DEBUG_PRINTF("Data send %d...", data_size);
+					if(send(data, data_size) == data_size)
+					{
+						DEBUG_PRINTF("Ok\r\n");
+						
+						if (!IsDataToSend())
+						{
+							// if we have not more data, send "eof"
+							data_size = strlen(eof);
+							if (send(eof, data_size) == data_size)
+							{
+								DEBUG_PRINTF("End of data, send \"EOF\"\r\n");
+							}
+							else
+							{
+								is_not_first_data_send = 0;
+							}
+						}					
+					}
+					else
+					{
+						DEBUG_PRINTF("Error\r\n");
+						is_not_first_data_send = 0;
+					}
+				}
 				else
-					DEBUG_PRINTF("Ok\r\n");
-			}
+					break;
+
 			
-			//recive data
-			data_size =  recv(tmp_data, 256);
-			DEBUG_PRINTF("RX_DATA = %d\r\n", data_size);
-			
-			uint8_t * answer = (uint8_t *) nullptr;
-			
-			data_size = ReadBufferAnsw(&answer);
-			
-			if (data_size > 0)
-			{
-				DEBUG_PRINTF("Send answer...");
-				if(send(answer, data_size) != data_size)
-					DEBUG_PRINTF("Error\r\n");
-				else
-					DEBUG_PRINTF("Ok\r\n");
-			}
-			
-			if (!Get_Accelero_State())
-			{
-				// close connection
-					close();
-			}						
+				//recive data
+				uint32_t start_tick = HAL_GetTick();
+				while((data_size =  recv(tmp_data, 256)) == -1)
+				{
+					if ((HAL_GetTick() - start_tick ) > 2000)
+						break;
+				}
+
+				DEBUG_PRINTF("RX_DATA = %d\r\n", data_size);
+				
+				uint8_t * answer = (uint8_t *) nullptr;
+				
+				data_size = ReadBufferAnsw(&answer);
+				
+				if (data_size > 0)
+				{
+					DEBUG_PRINTF("Send answer...");
+					if(send(answer, data_size) == data_size)
+					{
+						DEBUG_PRINTF("Ok\r\n");		
+						DEBUG_PRINTF("Connection close\r\n");
+						close();					
+					}
+					else
+					{
+						is_not_first_data_send = 0;
+						DEBUG_PRINTF("Error\r\n");
+					}
+				}			
+			}								
 		}			
+	}
+	else 
+	{
+		if (is_connected())
+		{
+			close();
+		}	
 	}
 }
 
@@ -219,6 +277,16 @@ void powerUpDown()
   delay(1000);
 	HAL_GPIO_WritePin(GPIOB, GPIO_PIN_12, GPIO_PIN_RESET);//digitalWrite(pin,LOW);
   delay(1000);
+}
+
+void GetSignalLevel()
+{
+		const char cmd[] = "AT+CSQ\r\n";
+    char gprsBuffer[32] = {0};
+    int count = 0;    		
+		sim900_send_cmd(cmd, strlen(cmd));
+		sim900_read_buffer(gprsBuffer,32,DEFAULT_TIMEOUT);
+		DEBUG_PRINTF("%s",gprsBuffer );
 }
   
 bool checkSIMStatus(void)
@@ -737,8 +805,10 @@ int wait_writeable(int req_size)
 
 int send(const char * str, int len)
 {
-	const uint32_t wait_data_ok = 1000;
+	const uint32_t wait_data_ok = 2000;
   char cmd[256] = {0};
+	
+	DEBUG_PRINTF("%s", str);
 	if(len > 0)
 	{
 		sprintf(cmd,"AT+CIPSEND=%d\r\n",len);

@@ -23,6 +23,7 @@ uint32_t ReadBuffer(uint8_t ** pointer);
 uint32_t PushToBuffer(uint32_t param, const char * string, ...  );
 uint32_t PushToAnswers(void * data, uint32_t size, uint32_t param);
 uint32_t ReadBufferAnsw(uint8_t ** pointer);
+uint8_t IsDataToSend();
 
 int Parse_Command(char * data, int size);
 
