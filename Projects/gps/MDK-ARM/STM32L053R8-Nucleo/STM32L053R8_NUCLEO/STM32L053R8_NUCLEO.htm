@@ -3,7 +3,7 @@
 <title>Static Call Graph - [STM32L053R8_NUCLEO\STM32L053R8_NUCLEO.axf]</title></head>
 <body><HR>
 <H1>Static Call Graph for image STM32L053R8_NUCLEO\STM32L053R8_NUCLEO.axf</H1><HR>
-<BR><P>#&#060CALLGRAPH&#062# ARM Linker, 5060061: Last Updated: Tue Mar 29 22:07:16 2016
+<BR><P>#&#060CALLGRAPH&#062# ARM Linker, 5060061: Last Updated: Wed Mar 30 23:14:39 2016
 <BR><P>
 <H3>Maximum Stack Usage =        880 bytes + Unknown(Cycles, Untraceable Function Pointers)</H3><H3>
 Call chain for Maximum Stack Depth:</H3>
@@ -735,10 +735,11 @@ Global Symbols
 <BR>[Called By]<UL><LI><a href="#[69]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main
 </UL>
 
-<P><STRONG><a name="[ca]"></a>GSM_Task</STRONG> (Thumb, 204 bytes, Stack size 24 bytes, gprs_shield_arduino.o(i.GSM_Task))
+<P><STRONG><a name="[ca]"></a>GSM_Task</STRONG> (Thumb, 244 bytes, Stack size 24 bytes, gprs_shield_arduino.o(i.GSM_Task))
 <BR><BR>[Stack]<UL><LI>Max Depth = 880<LI>Call Chain = GSM_Task &rArr; send &rArr; sim900_check_with_cmd &rArr; sim900_wait_for_resp &rArr; millis
 </UL>
-<BR>[Calls]<UL><LI><a href="#[d0]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ReadBufferAnsw
+<BR>[Calls]<UL><LI><a href="#[9b]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_GetTick
+<LI><a href="#[d0]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ReadBufferAnsw
 <LI><a href="#[cd]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ReadBuffer
 <LI><a href="#[b1]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Get_Accelero_State
 <LI><a href="#[ce]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;send
@@ -883,6 +884,7 @@ Global Symbols
 <LI><a href="#[190]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;millis
 <LI><a href="#[ce]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;send
 <LI><a href="#[175]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;RTC_Init
+<LI><a href="#[ca]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;GSM_Task
 <LI><a href="#[b0]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Command_Task
 <LI><a href="#[af]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Command_Init
 </UL>
@@ -1965,7 +1967,7 @@ Global Symbols
 <P><STRONG><a name="[48]"></a>NMI_Handler</STRONG> (Thumb, 2 bytes, Stack size 0 bytes, stm32l0xx_it.o(i.NMI_Handler))
 <BR>[Address Reference Count : 1]<UL><LI> startup_stm32l053xx.o(RESET)
 </UL>
-<P><STRONG><a name="[16a]"></a>Parse_Command</STRONG> (Thumb, 356 bytes, Stack size 48 bytes, command.o(i.Parse_Command))
+<P><STRONG><a name="[16a]"></a>Parse_Command</STRONG> (Thumb, 316 bytes, Stack size 48 bytes, command.o(i.Parse_Command))
 <BR><BR>[Stack]<UL><LI>Max Depth = 136<LI>Call Chain = Parse_Command &rArr; atoi &rArr; strtol &rArr; _strtoul
 </UL>
 <BR>[Calls]<UL><LI><a href="#[16e]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;PushToAnswers
@@ -2229,6 +2231,7 @@ Global Symbols
 <BR>[Called By]<UL><LI><a href="#[c2]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Set_Output_Msg
 <LI><a href="#[aa]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;RTC_CalendarShow
 <LI><a href="#[16a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Parse_Command
+<LI><a href="#[ce]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;send
 <LI><a href="#[ca]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;GSM_Task
 <LI><a href="#[c5]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;GSM_Init
 <LI><a href="#[a7]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Accelero_Task
@@ -2345,8 +2348,8 @@ Global Symbols
 <BR>[Called By]<UL><LI><a href="#[ca]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;GSM_Task
 </UL>
 
-<P><STRONG><a name="[cc]"></a>connect</STRONG> (Thumb, 144 bytes, Stack size 296 bytes, gprs_shield_arduino.o(i.connect))
-<BR><BR>[Stack]<UL><LI>Max Depth = 344<LI>Call Chain = connect &rArr; sim900_read_buffer &rArr; millis
+<P><STRONG><a name="[cc]"></a>connect</STRONG> (Thumb, 128 bytes, Stack size 280 bytes, gprs_shield_arduino.o(i.connect))
+<BR><BR>[Stack]<UL><LI>Max Depth = 328<LI>Call Chain = connect &rArr; sim900_read_buffer &rArr; millis
 </UL>
 <BR>[Calls]<UL><LI><a href="#[18d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;sim900_send_cmd
 <LI><a href="#[18e]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;sim900_read_buffer
@@ -2440,7 +2443,7 @@ Global Symbols
 <BR>[Called By]<UL><LI><a href="#[ca]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;GSM_Task
 </UL>
 
-<P><STRONG><a name="[ce]"></a>send</STRONG> (Thumb, 116 bytes, Stack size 280 bytes, gprs_shield_arduino.o(i.send))
+<P><STRONG><a name="[ce]"></a>send</STRONG> (Thumb, 124 bytes, Stack size 280 bytes, gprs_shield_arduino.o(i.send))
 <BR><BR>[Stack]<UL><LI>Max Depth = 856<LI>Call Chain = send &rArr; sim900_check_with_cmd &rArr; sim900_wait_for_resp &rArr; millis
 </UL>
 <BR>[Calls]<UL><LI><a href="#[9b]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_GetTick
@@ -2450,6 +2453,7 @@ Global Symbols
 <LI><a href="#[c8]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;sim900_check_with_cmd
 <LI><a href="#[173]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_memclr4
 <LI><a href="#[17c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__2sprintf
+<LI><a href="#[a9]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__2printf
 </UL>
 <BR>[Called By]<UL><LI><a href="#[ca]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;GSM_Task
 </UL>

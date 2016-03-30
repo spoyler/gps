@@ -56,7 +56,7 @@ const char event[] = "$EVENT";
 const char volt	[] = "$VOLT";
 const char eof	[] = "$EOF";
 const char cmd	[] = "$CMD";
-const char ack	[] = "$ACK";
+const char ack	[] = "$ACK,0,0\r\n";
 
 enum
 {
@@ -111,8 +111,8 @@ uint32_t PushToBuffer(uint32_t param, const char * string, ...  )
 		
 		if (param == CMD_END)
 		{
-			buffer.data[buffer.head][buffer.buffer_pos++] = 0x10;
-			buffer.data[buffer.head][buffer.buffer_pos++] = 0x13;
+			buffer.data[buffer.head][buffer.buffer_pos++] = 0x0d;
+			buffer.data[buffer.head][buffer.buffer_pos++] = 0x0a;
 		}
 		
 		return 0;
@@ -135,6 +135,7 @@ uint32_t ReadBuffer(uint8_t ** pointer)
 	{
 		*pointer = (uint8_t*)buffer.data[buffer.tail];
 		buffer.tail = (buffer.tail + 1) & (buffer_size - 1);
+		
 		return buffer.buffer_pos;
 	}	
 	else
@@ -160,8 +161,8 @@ uint32_t PushToAnswers(void * data, uint32_t size, uint32_t param)
 		
 		if (param == CMD_END)
 		{
-			answers.data[answers.head][answers.buffer_pos++] = 0x10;
-			answers.data[answers.head][answers.buffer_pos++] = 0x13;
+			answers.data[answers.head][answers.buffer_pos++] = 0x0d;
+			answers.data[answers.head][answers.buffer_pos++] = 0x0a;
 		}
 		
 		return 0;
@@ -371,8 +372,9 @@ int Parse_Command(char * data, int size)
 		}
 	
 		PushToAnswers((void *)ack, sizeof(ack)-1, CLEAR);
-		PushToAnswers((void *)&error_code, sizeof(uint8_t), NO_ACTION);
-		PushToAnswers((void *)&value, sizeof(uint16_t), CMD_END);		
+		
+		//PushToAnswers((void *)&error_code, sizeof(uint8_t), NO_ACTION);
+		//PushToAnswers((void *)&value, sizeof(uint16_t), CMD_END);		
 		EndBufferWriteAnsw();
 		
 	}

@@ -172,7 +172,8 @@ void GSM_Task()
 			
 			if ((data_size > 0) && data != NULL)
 			{
-				DEBUG_PRINTF("Data send...");
+				data[data_size] = 0;
+				DEBUG_PRINTF("Data send %d...", data_size);
 				if(send(data, data_size) != data_size)
 					DEBUG_PRINTF("Error\r\n");
 				else
@@ -180,7 +181,13 @@ void GSM_Task()
 			}
 			
 			//recive data
-			data_size =  recv(tmp_data, 256);
+			uint32_t start_tick = HAL_GetTick();
+			while((data_size =  recv(tmp_data, 256)) == -1)
+			{
+				if ((HAL_GetTick() - start_tick ) > 2000)
+					break;
+			}
+
 			DEBUG_PRINTF("RX_DATA = %d\r\n", data_size);
 			
 			uint8_t * answer = (uint8_t *) nullptr;
@@ -737,8 +744,10 @@ int wait_writeable(int req_size)
 
 int send(const char * str, int len)
 {
-	const uint32_t wait_data_ok = 1000;
+	const uint32_t wait_data_ok = 2000;
   char cmd[256] = {0};
+	
+	DEBUG_PRINTF("%s", str);
 	if(len > 0)
 	{
 		sprintf(cmd,"AT+CIPSEND=%d\r\n",len);
