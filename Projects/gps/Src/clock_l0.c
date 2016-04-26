@@ -71,6 +71,9 @@ void SystemClock_Config(void)
      clocked below the maximum system frequency, to update the voltage scaling value 
      regarding system frequency refer to product datasheet.  */
   __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);
+	
+	  /* Select HSI as system clock source after Wake Up from Stop mode */
+  __HAL_RCC_WAKEUPSTOP_CLK_CONFIG(RCC_StopWakeUpClock_HSI);
 
   /* Enable HSI Oscillator and activate PLL with HSI as source */
   RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI;
@@ -98,6 +101,15 @@ void SystemClock_Config(void)
   {
     Error_Handler(1);
   }
+	
+	  /* Enable Ultra low power mode */
+  HAL_PWREx_EnableUltraLowPower();
+  
+  /* Enable the fast wake up from Ultra low power mode */
+  HAL_PWREx_EnableFastWakeUp();
+
+  /* Select HSI as system clock source after Wake Up from Stop mode */
+  __HAL_RCC_WAKEUPSTOP_CLK_CONFIG(RCC_StopWakeUpClock_HSI);
 }
 
 /**

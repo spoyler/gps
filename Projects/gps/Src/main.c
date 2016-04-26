@@ -47,7 +47,22 @@ void GPIO_Init(void);
   */
 int main(void)
 {
-  /* STM32xx HAL library initialization */
+
+	Init_All();
+	
+	while(1)
+	{
+		Accelero_Task();
+		RTC_Task();
+		ADC_Task();
+		GSM_Task();
+		Command_Task();
+	}
+}
+
+void Init_All()
+{
+	  /* STM32xx HAL library initialization */
   HAL_Init();
   
   /* Configure the system clock */
@@ -59,31 +74,38 @@ int main(void)
 	//
 	GPIO_Init();
 	//
+	RTC_Init();
+	//
 	ACCELERO_Init();
 	//
 	InitDebugUart();
 	//
 	DEBUG_PRINTF("\r\n\r\n\r\nSystem startup!\r\n");
-	//	
-	RTC_Init();
 	//
 	ADC_Init();
 	//
 	GPS_Init();
 	// Init GSM
 	GSM_Init();
+	//	
+	Command_Init();	
+}
+
+void ReInitPeriph()
+{
+	SystemClock_Config();   
 	//
-	Command_Init();
-	
-	
-	while(1)
-	{
-		Accelero_Task();
-		RTC_Task();
-		ADC_Task();
-		GSM_Task();
-		Command_Task();
-	}
+	InitDebugUart();
+	DEBUG_PRINTF("\r\nReinit Periph!\r\n");
+	DEBUG_PRINTF("Wake up from sleep mode\r\n");
+	//
+	ACCELERO_Init();
+	//
+	ADC_Init();
+	//
+	GPS_Init();
+	// Init GSM
+	GSM_Init();
 }
 
 
@@ -159,6 +181,27 @@ void GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
 	
 	HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);	
+	
+	// Alarm port pin
+	GPIO_InitStruct.Pin = GPIO_PIN_15;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
+  GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
+	
+	HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);	
+	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_15, GPIO_PIN_SET);
+	
+	
+	
+	 /* Configure GPIO PINs to detect Interrupts */
+  GPIO_InitStruct.Pin = GPIO_PIN_2;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING_FALLING;
+  GPIO_InitStruct.Pull  = GPIO_PULLUP;
+  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+  
+  /* Enable and set EXTI Interrupt priority */
+  HAL_NVIC_SetPriority(EXTI2_3_IRQn, 0x00, 0x00);
+  HAL_NVIC_EnableIRQ(EXTI2_3_IRQn);
 
 }
 

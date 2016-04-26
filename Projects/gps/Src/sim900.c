@@ -84,28 +84,32 @@ void sim900_flush_serial()
 void sim900_read_buffer(char *buffer, int count, unsigned int timeout/*, unsigned int chartimeout*/)
 {
 	const int chartimeout = 500;
-    int i = 0;
-    unsigned long timerStart, prevChar;
-		char c = 0;
-    timerStart = millis();
-    prevChar = 0;
-    while(1) {
-        while (sim900_check_readable()) {
-            c = uart->Instance->RDR;	//LUart.Instance->TDR = c;							
-            prevChar = millis();
-            buffer[i++] = c;
-            if(i >= count)
-							break;
-        }
-        if(i >= count)break;
-       if ((unsigned long) (millis() - timerStart) > timeout * 1000UL) {
-            break;
-        }
-        //If interchar Timeout => return FALSE. So we can return sooner from this function. Not DO it if we dont recieve at least one char (prevChar <> 0)
-//        if (((unsigned long) (millis() - prevChar) > chartimeout) && (prevChar != 0)) {
-//            break;
-//        }				
-    }
+	int i = 0;
+	unsigned long timerStart, prevChar;
+	char c = 0;
+	timerStart = millis();
+	prevChar = 0;
+	while(1) 
+	{
+		while (sim900_check_readable()) 
+		{
+			c = uart->Instance->RDR;	//LUart.Instance->TDR = c;							
+			prevChar = millis();
+			buffer[i++] = c;
+			
+			if(i >= count)
+				break;
+		}
+		if (i >= count)
+			break;
+		
+		if ((unsigned long) (millis() - timerStart) > timeout * 1000UL) 
+			break;
+	//If interchar Timeout => return FALSE. So we can return sooner from this function. Not DO it if we dont recieve at least one char (prevChar <> 0)
+	//        if (((unsigned long) (millis() - prevChar) > chartimeout) && (prevChar != 0)) {
+	//            break;
+	//        }				
+	}
 }
 
 void sim900_clean_buffer(char *buffer, int count)

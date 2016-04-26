@@ -13,6 +13,7 @@ void GPS_Send_Message(char * msg);
 void Set_Output_Msg(void);
 char * Get_GPS_Message(int message_type);
 void Reset_Message_Status(int message_type);
+void SetGPSSleepMode(void);
 
 #define nullptr 0
 

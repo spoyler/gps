@@ -38,6 +38,7 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "debug.h"
 
 /** @addtogroup STM32L0xx_HAL_Examples
   * @{
@@ -87,6 +88,20 @@ int main(void)
 
   /* Configure the system Power */
   SystemPower_Config();
+	
+		GPIO_InitTypeDef GPIO_InitStruct;
+	
+		
+		//UART3
+	GPIO_InitStruct.Pin = GPIO_PIN_10 | GPIO_PIN_11;
+  GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
+	GPIO_InitStruct.Alternate = GPIO_AF4_LPUART1;
+
+	HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);	
+	
+	InitDebugUart();
 
   while (1)
   {
@@ -108,14 +123,22 @@ int main(void)
           Wakeup Time Base = 16 /(~39.000KHz) = ~0,410 ms
           Wakeup Time = ~4s = 0,410ms  * WakeUpCounter
           ==> WakeUpCounter = ~4s/0,410ms = 9750 = 0x2616 */
-    HAL_RTCEx_SetWakeUpTimer_IT(&RTCHandle, 0x2616, RTC_WAKEUPCLOCK_RTCCLK_DIV16);
+		DEBUG_PRINTF("Sleep\r\n");
+		HAL_Delay(100);
+    HAL_RTCEx_SetWakeUpTimer_IT(&RTCHandle, 10, RTC_WAKEUPCLOCK_CK_SPRE_16BITS);
+		
+		 HAL_Delay(20000);
 
     /* Enter Stop Mode */
-    HAL_PWR_EnterSTOPMode(PWR_LOWPOWERREGULATOR_ON, PWR_STOPENTRY_WFI);
+    //HAL_PWR_EnterSTOPMode(PWR_LOWPOWERREGULATOR_ON, PWR_STOPENTRY_WFI);
+		
+
 
     /* Configures system clock after wake-up from STOP: enable HSI, PLL and select
     PLL as system clock source (HSI and PLL are disabled automatically in STOP mode) */
-    SystemClockConfig_STOP();
+//    SystemClock_Config();
+//		InitDebugUart();
+		DEBUG_PRINTF("Wakeup\r\n");
   }
 }
 
@@ -211,19 +234,10 @@ static void SystemPower_Config(void)
   GPIO_InitStructure.Pin = GPIO_PIN_All;
   GPIO_InitStructure.Mode = GPIO_MODE_ANALOG;
   GPIO_InitStructure.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(GPIOA, &GPIO_InitStructure); 
-  HAL_GPIO_Init(GPIOB, &GPIO_InitStructure);
-  HAL_GPIO_Init(GPIOC, &GPIO_InitStructure);
-  HAL_GPIO_Init(GPIOD, &GPIO_InitStructure);
-  HAL_GPIO_Init(GPIOH, &GPIO_InitStructure);
+
 
   /* Disable GPIOs clock */
-  __HAL_RCC_GPIOA_CLK_DISABLE();
-  __HAL_RCC_GPIOB_CLK_DISABLE();
-  __HAL_RCC_GPIOC_CLK_DISABLE();
-  __HAL_RCC_GPIOD_CLK_DISABLE();
-  __HAL_RCC_GPIOH_CLK_DISABLE();
- 
+
   /* Configure RTC */
   RTCHandle.Instance = RTC;
   /* Configure RTC prescaler and RTC data registers as follow:
@@ -315,6 +329,7 @@ void HAL_RTCEx_WakeUpTimerEventCallback(RTC_HandleTypeDef *hrtc)
 {
   /* Clear Wake Up Flag */
   __HAL_PWR_CLEAR_FLAG(PWR_FLAG_WU);
+	DEBUG_PRINTF("Timer\r\n");
 }
 
 /**

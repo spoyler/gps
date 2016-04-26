@@ -8,13 +8,14 @@
 #include "accelero.h"
 #include "debug.h"
 #include "rtc.h"
+#include "command.h"
 
 static void *LSM6DS3_X_0_handle = NULL;
 static void *GYRO_handle = NULL;
 
 volatile uint8_t mems_int1_detected = 0;
 volatile uint8_t mems_int2_detected = 0;
-volatile uint8_t state = 0;
+volatile uint8_t acc_state = 0;	// after start, state of the accelerometer must be inactive
 volatile uint8_t return_state = 0;
 volatile uint8_t free_fall_detect = 0;
 
@@ -25,24 +26,29 @@ SensorAxesRaw_t gyro_data;
 void ACCELERO_Init()
 {
 	// GYRO INit
+	BSP_GYRO_DeInit(&GYRO_handle);
 	BSP_GYRO_Init( GYRO_SENSORS_AUTO, &GYRO_handle );
 	BSP_GYRO_Sensor_Enable(GYRO_handle);
 	
 	// ACCELERO_Init
+	BSP_ACCELERO_DeInit(&LSM6DS3_X_0_handle );
 	BSP_ACCELERO_Init( LSM6DS3_X_0, &LSM6DS3_X_0_handle );
 	BSP_ACCELERO_Sensor_Enable( LSM6DS3_X_0_handle );
 	
 	BSP_ACCELERO_Enable_Free_Fall_Detection_Ext( LSM6DS3_X_0_handle );
 	
 	
-	LSM6DS3_ACC_GYRO_W_INACTIVITY_ON(&LSM6DS3_X_0_handle, LSM6DS3_ACC_GYRO_INACTIVITY_ON_DISABLED);
-	HAL_Delay(500);
-	LSM6DS3_ACC_GYRO_W_INACTIVITY_ON(&LSM6DS3_X_0_handle, LSM6DS3_ACC_GYRO_INACTIVITY_ON_ENABLED);
-	LSM6DS3_ACC_GYRO_W_SLEEP_DUR(LSM6DS3_X_0_handle, 7);
-	LSM6DS3_ACC_GYRO_W_WAKE_DUR(LSM6DS3_X_0_handle, 2);
-	LSM6DS3_ACC_GYRO_W_WK_THS(LSM6DS3_X_0_handle, 2);
+	//LSM6DS3_ACC_GYRO_W_INACTIVITY_ON(&LSM6DS3_X_0_handle, LSM6DS3_ACC_GYRO_INACTIVITY_ON_DISABLED);
+	//HAL_Delay(500);
+	//LSM6DS3_ACC_GYRO_W_INACTIVITY_ON(&LSM6DS3_X_0_handle, LSM6DS3_ACC_GYRO_INACTIVITY_ON_ENABLED);
+	//LSM6DS3_ACC_GYRO_W_SLEEP_DUR(LSM6DS3_X_0_handle, 7);
+	//LSM6DS3_ACC_GYRO_W_WAKE_DUR(LSM6DS3_X_0_handle, 2);
+	//LSM6DS3_ACC_GYRO_W_WK_THS(LSM6DS3_X_0_handle, 2);
 	
-	LSM6DS3_ACC_GYRO_W_SleepEvOnInt1(LSM6DS3_X_0_handle, LSM6DS3_ACC_GYRO_INT1_SLEEP_ENABLED);
+	//LSM6DS3_ACC_GYRO_W_SleepEvOnInt1(LSM6DS3_X_0_handle, LSM6DS3_ACC_GYRO_INT1_SLEEP_ENABLED);
+	
+	//acc_state = LoadAcceleroStateFromBKP();
+	BSP_ACCELERO_Enable_Wake_Up_Detection_Ext( LSM6DS3_X_0_handle );
 	
 }
 
@@ -65,21 +71,16 @@ void Accelero_Task()
 		}
 		mems_int2_detected = 0;
 	}
+	//status = 0;
+	//BSP_ACCELERO_Get_Wake_Up_Detection_Status_Ext( LSM6DS3_X_0_handle, &status );
+	//if (status)
+	
 	if (mems_int1_detected)
 	{
 		mems_int1_detected = 0;
 		{	
-			RTC_CalendarShow();
-			return_state = state;
-
-			if (return_state)
-			{
-				DEBUG_PRINTF("Active state\r\n");
-			}
-			else 
-			{				
-				DEBUG_PRINTF("Sleep state\r\n");
-			}
+			DEBUG_PRINTF("Active state.\r\n");
+			RTC_AlarmConfig(GetParamValue(WAIT_BEFOR_SLEEP), RTC_ALARM_A);
 		}
 	}
 	
@@ -128,6 +129,14 @@ uint8_t Get_Accelero_State()
 	return return_state;
 }
 
+void Set_Gyro_Sleep_Mode(uint8_t new_mode)
+{
+	if (new_mode)
+		LSM6DS3_ACC_GYRO_W_SleepMode_G(LSM6DS3_X_0_handle, LSM6DS3_ACC_GYRO_SLEEP_G_ENABLED);
+	else
+		LSM6DS3_ACC_GYRO_W_SleepMode_G(LSM6DS3_X_0_handle, LSM6DS3_ACC_GYRO_SLEEP_G_DISABLED);
+}
+
 uint8_t Get_Free_Fall_State()
 {
 	uint8_t ret_value = free_fall_detect;
@@ -140,14 +149,48 @@ uint8_t Get_Free_Fall_State()
 
 void HAL_GPIO_EXTI_Callback( uint16_t GPIO_Pin )
 {
+	
+	if (__HAL_PWR_GET_FLAG(PWR_FLAG_WU))
+	{
+		/* Clear Wake Up Flag */
+		__HAL_PWR_CLEAR_FLAG(PWR_FLAG_WU);
+		SetWakeupSource(WAKEUP_SOURCE_ACC);
+	}
+	
+	if (GPIO_Pin == GPIO_PIN_2)
+	{
+		
+		if (HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_2) == GPIO_PIN_RESET)
+		{
+			__HAL_PWR_CLEAR_FLAG(PWR_FLAG_WU);
+			SetWakeupSource(WAKEUP_SOURCE_CHARGING);
+			ChargingOn();
+		}
+		else
+		{
+			ChargingOFF();
+		}
+				
+	}
+		
 	if ( GPIO_Pin == M_INT1_PIN )
   {
 		mems_int1_detected = 1;
-		state = !state;
   }
 	else
 		if (GPIO_Pin == M_INT2_PIN)
 		{
 			mems_int2_detected = 1;
-		}
+		}	
+}
+
+
+void EnableWakeupDetection(void)
+{
+	BSP_ACCELERO_Enable_Wake_Up_Detection_Ext( LSM6DS3_X_0_handle );
+}
+
+void DisableWakeupDetection(void)
+{
+	BSP_ACCELERO_Disable_Wake_Up_Detection_Ext( LSM6DS3_X_0_handle );
 }

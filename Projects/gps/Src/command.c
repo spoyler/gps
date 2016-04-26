@@ -18,14 +18,23 @@ const uint32_t buffer_size = 8;
 const uint32_t buffer_lenght = 256;
 const uint32_t buffer_lenght_answ = 32;
 
-uint16_t ServerCommands[8] = {0};
+extern  uint8_t force_sleep;
+
+uint16_t ServerCommands[MAX_PARAMS] = {0};
+
+int8_t events[MAX_EVENTS] = {0};
+uint8_t wakeup_source = 0;
+uint8_t charging = 0;
+uint8_t alarm = 0;
+uint32_t alarm_start_time = 0;
 
 typedef struct
 {
 	uint32_t head;
 	uint32_t tail;
 	uint32_t buffer_pos[buffer_size];
-	uint8_t data[buffer_size][buffer_lenght];
+	uint8_t  data[buffer_size][buffer_lenght];
+	uint8_t	 flags[buffer_size];
 }SBuffer;
 
 typedef struct
@@ -42,6 +51,14 @@ enum
 	NO_ACTION = 1,
 	CMD_END = 2,
 	BUFFER_END = 3
+};
+
+enum
+{
+	CMD_REBOOT = 1,
+	CMD_SLEEP = 2,
+	CMD_ACTIVE = 3,
+	CMD_ALARM = 4
 };
 
 SBuffer buffer = {0};
@@ -96,6 +113,10 @@ void Command_Init()
 	
 	// set uin---------------------------------------------------------------
 	uin_string_size = sprintf(uin_string, "%s,%d,%d,%d\r\n", uin, system_info.tracker_id, system_info.sw_version, system_info.hw_version);
+	ServerCommands[MESSAGE_PERIOD] = 10;
+	ServerCommands[WAIT_BEFOR_SLEEP] = 60;
+	ServerCommands[SLEEP_TIME] = 120;
+	ServerCommands[ALARM_TIME] = 30;
 	
 	last_tick = HAL_GetTick();
 }
@@ -106,6 +127,7 @@ uint32_t PushToBuffer(uint32_t param, const char * string, ...  )
 	{
 		buffer.buffer_pos[buffer.head] = 0;
 		memset(&buffer.data[buffer.head],0, buffer_lenght);
+		buffer.flags[buffer.head] = 0;
 	}
 	
 	uint32_t free_space = buffer_lenght - buffer.buffer_pos[buffer.head];
@@ -125,6 +147,12 @@ uint32_t PushToBuffer(uint32_t param, const char * string, ...  )
 	}
 }
 
+void SetBufferFlags(uint8_t flag_position)
+{
+	buffer.flags[buffer.head] |= (1 << flag_position);
+}
+
+
 uint8_t IsDataToSend()
 {
 	if (buffer.head == buffer.tail)
@@ -143,13 +171,14 @@ void EndBufferWrite()
 	}
 }
 
-uint32_t ReadBuffer(uint8_t ** pointer)
+uint32_t ReadBuffer(uint8_t ** pointer, uint8_t* flags)
 {
 	uint32_t data_size = 0;
 	if (buffer.head != buffer.tail)
 	{
 		data_size = buffer.buffer_pos[buffer.tail];
 		*pointer = (uint8_t*)buffer.data[buffer.tail];
+		*flags = buffer.flags[buffer.tail];
 		buffer.tail = (buffer.tail + 1) & (buffer_size - 1);
 		
 		return data_size;
@@ -218,12 +247,21 @@ uint32_t ReadBufferAnsw(uint8_t ** pointer)
 void Command_Task()
 {
 	//	
-	if (Get_Accelero_State())
+	//if (Get_Accelero_State())
 	{
 		const char *gps_gga = (char *)Get_GPS_Message(GGA);
 		const char *gps_rmc = (char *)Get_GPS_Message(RMC);
 		
 		uint8_t free_fall_state = Get_Free_Fall_State();
+		
+		if (alarm)
+		{
+			if ((HAL_GetTick() - alarm_start_time) > GetParamValue(ALARM_TIME)*1000)
+			{
+				alarm = 0;
+				HAL_GPIO_WritePin(GPIOC, GPIO_PIN_15, GPIO_PIN_SET);
+			}
+		}
 		
 		if (((HAL_GetTick() - last_tick) > ServerCommands[1])
 				|| free_fall_state )
@@ -261,11 +299,21 @@ void Command_Task()
 				PushToBuffer(NO_ACTION, "%s\r\n", gps_rmc);
 				
 				// set motion state------------------------------------------------------
-				PushToBuffer(NO_ACTION, "%s,%d,%d,%d,%d,%d,%d\r\n", ag, acc_data->AXIS_X, acc_data->AXIS_Y, acc_data->AXIS_X,
+				PushToBuffer(NO_ACTION, "%s,%d,%d,%d,%d,%d,%d\r\n", ag, acc_data->AXIS_X, acc_data->AXIS_Y, acc_data->AXIS_Z,
 																					gyro_data->AXIS_X, gyro_data->AXIS_Y, gyro_data->AXIS_Z);
 				
 				// set event state-------------------------------------------------------
-				PushToBuffer(NO_ACTION, "%s,%d,0\r\n", event, free_fall_state);
+				for (int i = EVENT_FREE_FALL; i < MAX_EVENTS; i++)
+				{
+					if (GetEventState(i) == EVENT_ACTIVE)
+					{
+						PushToBuffer(NO_ACTION, "%s,%d,0\r\n", event, i);
+						
+						// we must make sure that the event is delivered
+						// flags will be resets, when data will be delivered
+						SetBufferFlags(i);
+					}					
+				}
 				
 				// set adc result--------------------------------------------------------
 				PushToBuffer(NO_ACTION, "%s,%d,%d\r\n", volt, abs(adc_data[0]), abs(adc_data[1]));
@@ -277,10 +325,10 @@ void Command_Task()
 			}
 		}
 	}
-	else
-	{
-		last_tick =  HAL_GetTick();
-	}
+//	else
+//	{
+		
+//	}
 }
 
 int Parse_Command(char * data, int size)
@@ -345,14 +393,24 @@ int Parse_Command(char * data, int size)
 						{
 							switch (value)
 							{
-								case 1:
+								case CMD_REBOOT:
 									DEBUG_PRINTF("REBOOT\r\n");
 								break;
-								case 2:
+								case CMD_SLEEP:
 									DEBUG_PRINTF("SLEEP\r\n");
+									force_sleep = 1;
+									DisableWakeupDetection();
 								break;
-								case 3:
+								case CMD_ACTIVE:
+									DEBUG_PRINTF("ACTIVE\r\n");
+									EnableWakeupDetection();
+									force_sleep = 0;
+								break;
+								case CMD_ALARM:
 									DEBUG_PRINTF("ALARM\r\n");
+									alarm = 1;
+									alarm_start_time = HAL_GetTick();
+									HAL_GPIO_WritePin(GPIOC, GPIO_PIN_15, GPIO_PIN_RESET);
 								break;
 								default:
 									value = 0;
@@ -395,3 +453,74 @@ int Parse_Command(char * data, int size)
 	
 	return -1;
 }
+
+uint16_t GetParamValue(uint8_t param)
+{
+	if (param < MAX_PARAMS)
+		return ServerCommands[param];
+	else
+		return 0;
+}
+
+void DisableExternalDevices(void)
+{
+	Set_GSM_Sleep_Mode();
+	Set_Gyro_Sleep_Mode(MODE_ON);
+	SetGPSSleepMode();
+	//Set_Acc_Sleep_MOde();
+}
+
+void SetEventState(uint8_t event, uint8_t event_state)
+{
+	if ((event < MAX_EVENTS) && (event_state < ERROR_EVENT))
+	{
+		events[event] = event_state;
+	}
+}
+
+uint8_t GetEventState(uint8_t event)
+{
+	if (event < MAX_EVENTS)
+		return events[event];
+	else
+		return ERROR_EVENT;
+}
+
+void SetWakeupSource(uint8_t source)
+{
+	wakeup_source = source;
+}
+
+uint8_t GetWakeupSource(void)
+{
+	uint8_t ret_val = wakeup_source;
+	wakeup_source = 0;
+	
+	return ret_val;
+}
+
+uint8_t GetChargingState(void)
+{
+	return charging;
+}
+	
+void ChargingOn(void)
+{
+	charging = 1;
+}
+void ChargingOFF(void)
+{
+	charging = 0;
+}
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1317,15 +1317,15 @@ void HAL_RTC_AlarmIRQHandler(RTC_HandleTypeDef* hrtc)
   * @param  hrtc: RTC handle
   * @retval None
   */
-__weak void HAL_RTC_AlarmAEventCallback(RTC_HandleTypeDef *hrtc)
-{
+//__weak void HAL_RTC_AlarmAEventCallback(RTC_HandleTypeDef *hrtc, RTC_TimeTypeDef alarm_type)
+//{
   /* Prevent unused argument(s) compilation warning */
 //  UNUSED(hrtc);
 
   /* NOTE : This function should not be modified, when the callback is needed,
             the HAL_RTC_AlarmAEventCallback could be implemented in the user file
    */
-}
+//}
 
 /**
   * @brief  Handle AlarmA Polling request.

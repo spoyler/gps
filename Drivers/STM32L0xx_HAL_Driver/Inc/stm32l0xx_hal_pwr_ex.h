@@ -81,7 +81,7 @@ void HAL_PWREx_DisableFastWakeUp(void);
 void HAL_PWREx_EnableUltraLowPower(void);
 void HAL_PWREx_DisableUltraLowPower(void);
 void HAL_PWREx_EnableLowPowerRunMode(void);
-void HAL_PWREx_DisableLowPowerRunMode(void);
+HAL_StatusTypeDef HAL_PWREx_DisableLowPowerRunMode(void);
 
 
 /**

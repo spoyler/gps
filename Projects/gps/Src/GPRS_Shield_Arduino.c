@@ -52,6 +52,8 @@ const int host_port = 10123;
 uint8_t tmp_data[512];
 
 uint8_t is_not_first_data_send = 0;
+uint8_t server_connection_state = 0;
+uint8_t count_try_to_connect = 0;
 extern char uin_string[32];
 extern uint8_t uin_string_size;
 extern const char eof[];
@@ -151,15 +153,16 @@ void GSM_Init(void)//:gprsSerial(tx,rx)
 	const char manual_data_cmd[] = "AT+CIPRXGET=1\r\n";	
 	sim900_check_with_cmd(manual_data_cmd, "OK\r\n", CMD);
 		
-	//debug_simm800(&UartGSM);
-	
+	debug_simm800(&UartGSM);
+	SetServerConnectionState(NOT_CONNECTED);
+	count_try_to_connect = 0;	
 }
 
 void GSM_Task()
 {
 	char * ptr_gps_msg = 0;
 
-	if (Get_Accelero_State())
+	//if (Get_Accelero_State())
 	{
 		if (!is_connected())
 		{			
@@ -168,19 +171,28 @@ void GSM_Task()
 			{
 				DEBUG_PRINTF("Ok\r\n");
 				is_not_first_data_send = 0;
+				SetServerConnectionState(CONNECTED);
+				count_try_to_connect = 0;
 			}
 			else
 			{
 				DEBUG_PRINTF("Error\r\n");
+				
+				count_try_to_connect++;
+				if (count_try_to_connect < MAX_TRY_TO_CONNECT)
+					SetServerConnectionState(NOT_CONNECTED);
+				else
+					SetServerConnectionState(ERROR_IN_CONNECTION);
 			}
 		}
-		else
+		else //if (GetServerConnectionState() == CONNECTED)		
 		{			
 			while(1) 
 			{
 				// send the data
+				uint8_t flags = 0;
 				uint8_t * data = (uint8_t*)NULL;
-				uint32_t data_size = ReadBuffer(&data);
+				uint32_t data_size = ReadBuffer(&data, &flags);
 				
 			
 				if ((data_size > 0) && data != NULL)
@@ -210,7 +222,15 @@ void GSM_Task()
 							{
 								is_not_first_data_send = 0;
 							}
-						}					
+						}
+						// check message on events
+						for (int i = EVENT_FREE_FALL; i < MAX_EVENTS; i++)
+						{
+							if ((i == EVENT_SLEEP) || (i == EVENT_WAKEUP))
+								SetEventState(i, EVENT_SEND);
+							else
+								SetEventState(i, EVENT_NONE);
+						}
 					}
 					else
 					{
@@ -244,6 +264,7 @@ void GSM_Task()
 						DEBUG_PRINTF("Ok\r\n");		
 						DEBUG_PRINTF("Connection close\r\n");
 						close();					
+						SetServerConnectionState(NOT_CONNECTED);
 					}
 					else
 					{
@@ -254,12 +275,10 @@ void GSM_Task()
 			}								
 		}			
 	}
-	else 
+	if (is_connected() && (GetEventState(EVENT_SLEEP) == EVENT_SEND))
 	{
-		if (is_connected())
-		{
-			close();
-		}	
+		close();
+		SetServerConnectionState(NOT_CONNECTED);
 	}
 }
 
@@ -311,180 +330,6 @@ bool checkSIMStatus(void)
 		return false;
 }
 
-bool sendSMS(char *number, char *data)
-{
-    //char cmd[32];
-    if(!sim900_check_with_cmd("AT+CMGF=1\r\n", "OK\r\n", CMD)) { // Set message mode to ASCII
-        return false;
-    }
-    delay(500);
-	sim900_flush_serial();
-	sim900_send_cmd("AT+CMGS=\"", sizeof("AT+CMGS=\""));
-	sim900_send_cmd(number, sizeof(number));
-  //sprintf(cmd,"AT+CMGS=\"%s\"\r\n", number);
-	//snprintf(cmd, sizeof(cmd),"AT+CMGS=\"%s\"\r\n", number);
-	//if(!sim900_check_with_cmd(cmd,">",CMD)) {
-    if(!sim900_check_with_cmd("\"\r\n",">",CMD)) {
-        return false;
-    }
-    delay(1000);
-    sim900_send_cmd(data, sizeof(data));
-    delay(500);
-    sim900_send_End_Mark();
-    return sim900_wait_for_resp("OK\r\n", CMD);
-}
-
-char isSMSunread()
-{
-    char gprsBuffer[48];  //48 is enough to see +CMGL:
-    char *s;
-    
-
-    //List of all UNREAD SMS and DON'T change the SMS UNREAD STATUS
-    sim900_send_cmd("AT+CMGL=\"REC UNREAD\",1\r\n", 0);
-    /*If you want to change SMS status to READ you will need to send:
-          AT+CMGL=\"REC UNREAD\"\r\n
-      This command will list all UNREAD SMS and change all of them to READ
-      
-     If there is not SMS, response is (30 chars)
-         AT+CMGL="REC UNREAD",1  --> 22 + 2
-                                 --> 2
-         OK                      --> 2 + 2
-
-     If there is SMS, response is like (>64 chars)
-         AT+CMGL="REC UNREAD",1
-         +CMGL: 9,"REC UNREAD","XXXXXXXXX","","14/10/16,21:40:08+08"
-         Here SMS text.
-         OK  
-         
-         or
-
-         AT+CMGL="REC UNREAD",1
-         +CMGL: 9,"REC UNREAD","XXXXXXXXX","","14/10/16,21:40:08+08"
-         Here SMS text.
-         +CMGL: 10,"REC UNREAD","YYYYYYYYY","","14/10/16,21:40:08+08"
-         Here second SMS        
-         OK           
-    */
-
-    sim900_clean_buffer(gprsBuffer,31); 
-    sim900_read_buffer(gprsBuffer,30,DEFAULT_TIMEOUT); 
-    //Serial.print("Buffer isSMSunread: ");Serial.println(gprsBuffer);
-
-    if(NULL != ( s = strstr(gprsBuffer,"OK"))) {
-        //In 30 bytes "doesn't" fit whole +CMGL: response, if recieve only "OK"
-        //    means you don't have any UNREAD SMS
-        delay(50);
-        return 0;
-    } else {
-        //More buffer to read
-        //We are going to flush serial data until OK is recieved
-        sim900_wait_for_resp("OK\r\n", CMD);        
-        //sim900_flush_serial();
-        //We have to call command again
-        sim900_send_cmd("AT+CMGL=\"REC UNREAD\",1\r\n", sizeof("AT+CMGL=\"REC UNREAD\",1\r\n"));
-        sim900_clean_buffer(gprsBuffer,48); 
-        sim900_read_buffer(gprsBuffer,47,DEFAULT_TIMEOUT);
-		//Serial.print("Buffer isSMSunread 2: ");Serial.println(gprsBuffer);       
-        if(NULL != ( s = strstr(gprsBuffer,"+CMGL:"))) {
-            //There is at least one UNREAD SMS, get index/position
-            s = strstr(gprsBuffer,":");
-            if (s != NULL) {
-                //We are going to flush serial data until OK is recieved
-                sim900_wait_for_resp("OK\r\n", CMD);
-                return atoi(s+1);
-            }
-        } else {
-            return -1; 
-
-        }
-    } 
-    return -1;
-}
-
-bool readSMS(int messageIndex, char *message, int length, char *phone, char *datetime)  
-{
-  /* Response is like:
-  AT+CMGR=2
-  
-  +CMGR: "REC READ","XXXXXXXXXXX","","14/10/09,17:30:17+08"
-  SMS text here
-  
-  So we need (more or lees), 80 chars plus expected message length in buffer. CAUTION FREE MEMORY
-  */
-
-    int i = 0;
-    char gprsBuffer[80 + length];
-    //char cmd[16];
-	char num[4];
-    char *p,*p2,*s;
-    
-    sim900_check_with_cmd("AT+CMGF=1\r\n","OK\r\n",CMD);
-    delay(1000);
-	//sprintf(cmd,"AT+CMGR=%d\r\n",messageIndex);
-    //sim900_send_cmd(cmd);
-	sim900_send_cmd("AT+CMGR=", sizeof("AT+CMGR="));
-	itoa(messageIndex, num);
-	sim900_send_cmd(num, 0);
-	sim900_send_cmd("\r\n", sizeof("\r\n"));
-    sim900_clean_buffer(gprsBuffer,sizeof(gprsBuffer));
-    sim900_read_buffer(gprsBuffer,sizeof(gprsBuffer), 0);
-      
-    if(NULL != ( s = strstr(gprsBuffer,"+CMGR:"))){
-        // Extract phone number string
-        p = strstr(s,",");
-        p2 = p + 2; //We are in the first phone number character
-        p = strstr((char *)(p2), "\"");
-        if (NULL != p) {
-            i = 0;
-            while (p2 < p) {
-                phone[i++] = *(p2++);
-            }
-            phone[i] = '\0';            
-        }
-        // Extract date time string
-        p = strstr((char *)(p2),",");
-        p2 = p + 1; 
-        p = strstr((char *)(p2), ","); 
-        p2 = p + 2; //We are in the first date time character
-        p = strstr((char *)(p2), "\"");
-        if (NULL != p) {
-            i = 0;
-            while (p2 < p) {
-                datetime[i++] = *(p2++);
-            }
-            datetime[i] = '\0';
-        }        
-        if(NULL != ( s = strstr(s,"\r\n"))){
-            i = 0;
-            p = s + 2;
-            while((*p != '\r')&&(i < length-1)) {
-                message[i++] = *(p++);
-            }
-            message[i] = '\0';
-        }
-        return true;
-    }
-    return false;    
-}
-
-
-bool deleteSMS(int index)
-{
-    //char cmd[16];
-	char num[4];
-    //sprintf(cmd,"AT+CMGD=%d\r\n",index);
-    sim900_send_cmd("AT+CMGD=", sizeof("AT+CMGD="));
-	itoa(index, num);
-	sim900_send_cmd(num, 0);
-	//snprintf(cmd,sizeof(cmd),"AT+CMGD=%d\r\n",index);
-    //sim900_send_cmd(cmd);
-    //return 0;
-    // We have to wait OK response
-	//return sim900_check_with_cmd(cmd,"OK\r\n",CMD);
-	return sim900_check_with_cmd("\r","OK\r\n",CMD);	
-}
-
 bool callUp(char *number)
 {
     //char cmd[24];
@@ -493,8 +338,8 @@ bool callUp(char *number)
     }
     delay(1000);
 	//HACERR quitar SPRINTF para ahorar memoria ???
-    //sprintf(cmd,"ATD%s;\r\n", number);
-    //sim900_send_cmd(cmd);
+  //sprintf(cmd,"ATD%s;\r\n", number);
+  //sim900_send_cmd(cmd);
 	sim900_send_cmd("ATD", sizeof("ATD"));
 	sim900_send_cmd(number, strlen(number));
 	sim900_send_cmd(";\r\n", 3);
@@ -931,6 +776,29 @@ char* getIPAddress()
 unsigned long getIPnumber()
 {
     return _ip;
+}
+
+uint8_t Set_GSM_Sleep_Mode()
+{
+	const char cmd_sleep[] = "AT+CPOWD=1\r\n";
+	char resp[64] = {0};
+
+  sim900_send_cmd(cmd_sleep, strlen(cmd_sleep));
+  sim900_read_buffer(resp, 64, 1);
+  if (strstr(resp,"NORMAL POWER DOWN") != NULL)
+		return true;
+	else
+    return false;
+}
+
+void SetServerConnectionState(uint8_t new_state)
+{
+	server_connection_state = new_state;
+}
+
+uint8_t GetServerConnectionState(void)
+{
+	return server_connection_state;
 }
 
 

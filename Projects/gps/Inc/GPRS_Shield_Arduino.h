@@ -46,6 +46,15 @@ typedef enum {
     UDP    = 2
 }Protocol;
 
+typedef enum
+{
+	NOT_CONNECTED = 0,
+	CONNECTED = 1,
+	ERROR_IN_CONNECTION = 2
+}TServerConnectionState;
+
+#define MAX_TRY_TO_CONNECT 10
+
 //#define DEFAULT_TIMEOUT 500
 #define CHART_TIMEOUT		100
 
@@ -79,7 +88,7 @@ typedef enum {
      *      false on success
      *      true on error
      */
-    bool sendSMS(char* number, char* data);
+   // bool sendSMS(char* number, char* data);
 
     /** Check if there is any UNREAD SMS: this function DOESN'T change the UNREAD status of the SMS
      *  @returns
@@ -88,7 +97,7 @@ typedef enum {
      *       0 - there is no SMS with specified status (UNREAD)
      */
 
-	char isSMSunread(void);
+	//char isSMSunread(void);
     
     /** read SMS, phone and date if getting a SMS message. It changes SMS status to READ 
      *  @param  messageIndex  SIM position to read
@@ -100,7 +109,7 @@ typedef enum {
      *      true on success
      *      false on error
      */
-    bool readSMS(int messageIndex, char *message, int length, char *phone, char *datetime); 
+   // bool readSMS(int messageIndex, char *message, int length, char *phone, char *datetime); 
 
     /** read SMS if getting a SMS message
      *  @param  buffer  buffer that get from GPRS module(when getting a SMS, GPRS module will return a buffer array)
@@ -118,7 +127,7 @@ typedef enum {
      *      true on success
      *      false on error
      */
-    bool deleteSMS(int index);
+    //bool deleteSMS(int index);
 
     /** call someone
      *  @param  number  the phone number which you want to call
@@ -297,4 +306,10 @@ typedef enum {
 		void GetMoney();
 		
 		void GetSignalLevel();
+		
+		uint8_t Set_GSM_Sleep_Mode();
+		
+		void SetServerConnectionState(uint8_t new_state);
+		
+		uint8_t GetServerConnectionState(void);
 #endif

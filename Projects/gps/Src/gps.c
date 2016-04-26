@@ -26,6 +26,7 @@ int gps_message_index = 0;
 int gps_message_recived = 0;
 
 const char set_output_msg[] = "$PMTK314";
+const char set_sleep_mode[] = "$PMTK161,0";
 
 
 
@@ -83,6 +84,24 @@ void Set_Output_Msg()
 	{
 		msg_pos += sprintf(&gps_output_message[msg_pos],",%d", output_msg_state[i]);
 	}
+	
+	char crc = GPS_Calc_CRC(gps_output_message, msg_pos);
+	
+	msg_pos += sprintf(&gps_output_message[msg_pos],"*%x\r\n", crc);
+	
+	DEBUG_PRINTF(gps_output_message);
+		
+	GPS_Send_Message(gps_output_message);
+}
+
+void SetGPSSleepMode()
+{
+	char gps_output_message[64];
+	memset(gps_output_message, 0, 64);
+	
+	int msg_pos = 0;
+		
+	msg_pos += sprintf(gps_output_message, "%s", set_sleep_mode);
 	
 	char crc = GPS_Calc_CRC(gps_output_message, msg_pos);
 	

@@ -133,9 +133,9 @@ DrvStatusTypeDef LSM6DS3_Sensor_IO_ITConfig( void )
 	__GPIOA_CLK_ENABLE();
 	
 	 /* Configure GPIO PINs to detect Interrupts */
-  GPIO_InitStruct.Pin = GPIO_PIN_10 | GPIO_PIN_9;
+  GPIO_InitStruct.Pin = M_INT1_PIN | M_INT2_PIN;
   GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FAST;
+  //GPIO_InitStruct.Speed = GPIO_SPEED_FAST;
   GPIO_InitStruct.Pull  = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
   

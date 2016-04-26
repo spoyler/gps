@@ -1104,6 +1104,10 @@ typedef struct
 /**
   * @}
   */
+	
+#define __HAL_RCC_WWDG_FORCE_RESET()     SET_BIT(RCC->APB1RSTR, (RCC_APB1RSTR_WWDGRST)) 
+#define __HAL_RCC_PWR_RELEASE_RESET()    CLEAR_BIT(RCC->APB1RSTR, (RCC_APB1RSTR_PWRRST)) 
+#define __HAL_RCC_PWR_CLK_ENABLE()     SET_BIT(RCC->APB1ENR, (RCC_APB1ENR_PWREN)) 
 
 /* Include RCC HAL Extension module */
 #include "stm32L0xx_hal_rcc_ex.h"

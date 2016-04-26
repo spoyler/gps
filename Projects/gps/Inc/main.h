@@ -50,6 +50,8 @@
 /* Exported functions ------------------------------------------------------- */
 void SystemClock_Config(void);
 void Error_Handler(uint16_t error);
+void Init_All();
+void ReInitPeriph();
 
 #endif /* __MAIN_H */
 
