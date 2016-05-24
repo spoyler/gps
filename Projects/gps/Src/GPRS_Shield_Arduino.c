@@ -153,7 +153,7 @@ void GSM_Init(void)//:gprsSerial(tx,rx)
 	const char manual_data_cmd[] = "AT+CIPRXGET=1\r\n";	
 	sim900_check_with_cmd(manual_data_cmd, "OK\r\n", CMD);
 		
-	debug_simm800(&UartGSM);
+	//debug_simm800(&UartGSM);
 	SetServerConnectionState(NOT_CONNECTED);
 	count_try_to_connect = 0;	
 }
