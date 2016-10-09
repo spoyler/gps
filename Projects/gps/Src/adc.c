@@ -138,6 +138,23 @@ void ADC_Task()
 	}
 }
 
+void ADC_Debug()
+{
+	int i = 0;
+	ADC_Task();
+	while(i < num_ch)
+	{
+		DEBUG_PRINTF("adc[%d] = 0x%x\r\n", i, adc_result[i]);
+		i++;
+	}	
+	
+	DEBUG_PRINTF("Charging state: ");
+	if (GetChargingState())
+		DEBUG_PRINTF("ON\r\n");
+	else
+		DEBUG_PRINTF("OFF\r\n");
+}
+
 int32_t * Get_ADC_Data()
 {
 	dif_adc_result[0] = adc_result[1] - adc_result[0];

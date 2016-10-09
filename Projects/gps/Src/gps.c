@@ -62,8 +62,12 @@ void GPS_Init()
   */
 void Set_Output_Msg()
 {
+	char * pmtk = nullptr;
 	char gps_output_message[GPS_MAX_MESSAGE_SIZE];
 	memset(gps_output_message, 0, GPS_MAX_MESSAGE_SIZE);
+	uint32_t init_start_time = 0;
+	
+	DEBUG_PRINTF("GPS Init...");
 	
 	int msg_pos = 0;
 		
@@ -89,9 +93,20 @@ void Set_Output_Msg()
 	
 	msg_pos += sprintf(&gps_output_message[msg_pos],"*%x\r\n", crc);
 	
-	DEBUG_PRINTF(gps_output_message);
+	//DEBUG_PRINTF(gps_output_message);
 		
 	GPS_Send_Message(gps_output_message);
+	init_start_time = HAL_GetTick();
+	while((HAL_GetTick() - init_start_time) < 3000)
+	{
+		if ((pmtk = Get_GPS_Message(PMTK001)) != nullptr)
+		{
+			DEBUG_PRINTF("Ok\r\n");
+			break;
+		}
+	}
+	if (pmtk == nullptr)
+		DEBUG_PRINTF("False\r\n");
 }
 
 void SetGPSSleepMode()
@@ -200,6 +215,24 @@ void USART1_IRQHandler(void)
 		}		
 		++gps_message_index;		
 		return;
+	}
+}
+
+void GPS_Debug()
+{
+	const char *gps_gga = (char *)Get_GPS_Message(GGA);
+	const char *gps_rmc = (char *)Get_GPS_Message(RMC);
+	
+	if (gps_gga != nullptr)
+	{
+		DEBUG_PRINTF("%s\r\n", gps_gga);
+		Reset_Message_Status(GGA);		
+	}
+	
+	if (gps_rmc != nullptr)
+	{
+		DEBUG_PRINTF("%s\r\n\r\n", gps_rmc);
+		Reset_Message_Status(RMC);
 	}
 }
 

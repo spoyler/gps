@@ -18,6 +18,7 @@ volatile uint8_t mems_int2_detected = 0;
 volatile uint8_t acc_state = 0;	// after start, state of the accelerometer must be inactive
 volatile uint8_t return_state = 0;
 volatile uint8_t free_fall_detect = 0;
+DrvStatusTypeDef accelero_init = COMPONENT_OK;
 
 				 
 SensorAxesRaw_t acc_data;
@@ -25,17 +26,18 @@ SensorAxesRaw_t gyro_data;
 
 void ACCELERO_Init()
 {
+	DEBUG_PRINTF("Accelero Init...");
 	// GYRO INit
 	BSP_GYRO_DeInit(&GYRO_handle);
-	BSP_GYRO_Init( GYRO_SENSORS_AUTO, &GYRO_handle );
-	BSP_GYRO_Sensor_Enable(GYRO_handle);
+	accelero_init += BSP_GYRO_Init( GYRO_SENSORS_AUTO, &GYRO_handle );
+	accelero_init += BSP_GYRO_Sensor_Enable(GYRO_handle);
 	
 	// ACCELERO_Init
 	BSP_ACCELERO_DeInit(&LSM6DS3_X_0_handle );
-	BSP_ACCELERO_Init( LSM6DS3_X_0, &LSM6DS3_X_0_handle );
-	BSP_ACCELERO_Sensor_Enable( LSM6DS3_X_0_handle );
+	accelero_init += BSP_ACCELERO_Init( LSM6DS3_X_0, &LSM6DS3_X_0_handle );
+	accelero_init += BSP_ACCELERO_Sensor_Enable( LSM6DS3_X_0_handle );
 	
-	BSP_ACCELERO_Enable_Free_Fall_Detection_Ext( LSM6DS3_X_0_handle );
+	accelero_init += BSP_ACCELERO_Enable_Free_Fall_Detection_Ext( LSM6DS3_X_0_handle );
 	
 	
 	//LSM6DS3_ACC_GYRO_W_INACTIVITY_ON(&LSM6DS3_X_0_handle, LSM6DS3_ACC_GYRO_INACTIVITY_ON_DISABLED);
@@ -48,8 +50,11 @@ void ACCELERO_Init()
 	//LSM6DS3_ACC_GYRO_W_SleepEvOnInt1(LSM6DS3_X_0_handle, LSM6DS3_ACC_GYRO_INT1_SLEEP_ENABLED);
 	
 	//acc_state = LoadAcceleroStateFromBKP();
-	BSP_ACCELERO_Enable_Wake_Up_Detection_Ext( LSM6DS3_X_0_handle );
-	
+	accelero_init += BSP_ACCELERO_Enable_Wake_Up_Detection_Ext( LSM6DS3_X_0_handle );
+	if (!accelero_init)
+		DEBUG_PRINTF("Ok\r\n");
+	else
+		DEBUG_PRINTF("False\r\n");
 }
 
 
@@ -58,59 +63,68 @@ void Accelero_Task()
 	uint8_t  status = 0;
 	GYRO_Drv_t *driver_gyro = NULL;
 	ACCELERO_Drv_t *driver_acc = NULL;
-	// check interrupt from gyroscope
-	if ( mems_int2_detected != 0 )
+	
+	if (accelero_init == COMPONENT_OK)
 	{
-		if ( BSP_ACCELERO_Get_Free_Fall_Detection_Status_Ext( LSM6DS3_X_0_handle, &status ) == COMPONENT_OK )
+		// check interrupt from gyroscope
+		if ( mems_int2_detected != 0 )
 		{
-			if ( status != 0 )
+			if ( BSP_ACCELERO_Get_Free_Fall_Detection_Status_Ext( LSM6DS3_X_0_handle, &status ) == COMPONENT_OK )
 			{
-				free_fall_detect = 1;
-				DEBUG_PRINTF("Free Fall Detection!!!!\r\n");
+				if ( status != 0 )
+				{
+					free_fall_detect = 1;
+					DEBUG_PRINTF("Free Fall Detection!!!!\r\n");
+				}
+			}
+			mems_int2_detected = 0;
+		}
+		//status = 0;
+		//BSP_ACCELERO_Get_Wake_Up_Detection_Status_Ext( LSM6DS3_X_0_handle, &status );
+		//if (status)
+		
+		if (mems_int1_detected)
+		{
+			mems_int1_detected = 0;
+			{	
+				DEBUG_PRINTF("Active state.\r\n");
+				RTC_AlarmConfig(GetParamValue(WAIT_BEFOR_SLEEP), RTC_ALARM_A);
 			}
 		}
-		mems_int2_detected = 0;
-	}
-	//status = 0;
-	//BSP_ACCELERO_Get_Wake_Up_Detection_Status_Ext( LSM6DS3_X_0_handle, &status );
-	//if (status)
-	
-	if (mems_int1_detected)
-	{
-		mems_int1_detected = 0;
-		{	
-			DEBUG_PRINTF("Active state.\r\n");
-			RTC_AlarmConfig(GetParamValue(WAIT_BEFOR_SLEEP), RTC_ALARM_A);
+		
+		driver_gyro = ( GYRO_Drv_t * )((DrvContextTypeDef *)(GYRO_handle))->pVTable;	
+		driver_acc = ( ACCELERO_Drv_t * )((DrvContextTypeDef *)(LSM6DS3_X_0_handle))->pVTable;
+		
+		driver_gyro->Get_Axes_Status(LSM6DS3_X_0_handle, &status);	
+		// data from accelerometr
+		if (status)
+		{
+			driver_gyro->Get_AxesRaw(LSM6DS3_X_0_handle, &acc_data);
+			if (Get_Debug_State(ACC))
+			{
+				DEBUG_PRINTF("gyro_data_x = %d ", gyro_data.AXIS_X);
+				DEBUG_PRINTF("gyro_data_y = %d ", gyro_data.AXIS_Y);
+				DEBUG_PRINTF("gyro_data_z = %d\r\n", gyro_data.AXIS_Z);
+			}		
+		}
+
+		driver_acc->Get_Axes_Status(LSM6DS3_X_0_handle, &status);	
+		// data from gyroscope
+		if (status)
+		{
+			driver_acc->Get_AxesRaw(LSM6DS3_X_0_handle, &gyro_data);
+			if (Get_Debug_State(ACC))
+			{
+				DEBUG_PRINTF("acc_data_x = %d ", acc_data.AXIS_X);
+				DEBUG_PRINTF("acc_data_y = %d ", acc_data.AXIS_Y);
+				DEBUG_PRINTF("acc_data_z = %d\r\n", acc_data.AXIS_Z);
+			}
 		}
 	}
-	
-	
-	
-
-	driver_gyro = ( GYRO_Drv_t * )((DrvContextTypeDef *)(GYRO_handle))->pVTable;	
-	driver_acc = ( ACCELERO_Drv_t * )((DrvContextTypeDef *)(LSM6DS3_X_0_handle))->pVTable;
-	
-	driver_gyro->Get_Axes_Status(LSM6DS3_X_0_handle, &status);	
-	// data from accelerometr
-	if (status)
-	{
-		driver_gyro->Get_AxesRaw(LSM6DS3_X_0_handle, &acc_data);
-/*	DEBUG_PRINTF("gyro_data_x = %d\t\t", gyro_data.AXIS_X);
-		DEBUG_PRINTF("gyro_data_y = %d\t\t", gyro_data.AXIS_Y);
-		DEBUG_PRINTF("gyro_data_z = %d\r\n", gyro_data.AXIS_Z);
-*/		
-	}
-
-	driver_acc->Get_Axes_Status(LSM6DS3_X_0_handle, &status);	
-	// data from gyroscope
-	if (status)
-	{
-		driver_acc->Get_AxesRaw(LSM6DS3_X_0_handle, &gyro_data);
-/*	DEBUG_PRINTF("acc_data_x = %d\t\t", acc_data.AXIS_X);
-		DEBUG_PRINTF("acc_data_y = %d\t\t", acc_data.AXIS_Y);
-		DEBUG_PRINTF("acc_data_z = %d\r\n", acc_data.AXIS_Z);
-*/		
-	}
+}
+void ACC_Debug()
+{
+	Accelero_Task();
 }
 
 

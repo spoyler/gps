@@ -331,6 +331,11 @@ void Command_Task()
 //	}
 }
 
+void Command_Debug()
+{
+	DEBUG_PRINTF("Tracker ID = %d\r\n", system_info.tracker_id);
+}
+
 int Parse_Command(char * data, int size)
 {
 	/* $CMD,N,1,0\r\n*/

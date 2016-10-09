@@ -14,6 +14,7 @@ void Set_Output_Msg(void);
 char * Get_GPS_Message(int message_type);
 void Reset_Message_Status(int message_type);
 void SetGPSSleepMode(void);
+void GPS_Debug();
 
 #define nullptr 0
 

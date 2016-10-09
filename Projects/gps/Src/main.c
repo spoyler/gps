@@ -25,6 +25,7 @@
 #include "accelero.h"
 #include "adc.h"
 #include "command.h"
+#include "watchdog.h"
 
 
 /** @defgroup IHM04A1_Example_for_4_Unidirectionnal_motors
@@ -37,6 +38,7 @@
 /* Private variables ---------------------------------------------------------*/
 /* Private function prototypes -----------------------------------------------*/
 void GPIO_Init(void);
+uint32_t wdt_time = 0;
 
 /* Private functions ---------------------------------------------------------*/
 
@@ -47,16 +49,24 @@ void GPIO_Init(void);
   */
 int main(void)
 {
-
+	wdt_time = HAL_GetTick();
 	Init_All();
 	
 	while(1)
 	{
-		Accelero_Task();
-		RTC_Task();
-		ADC_Task();
-		GSM_Task();
-		Command_Task();
+		wdt_time = HAL_GetTick();
+		if (!Get_Debug_State(DBG))
+		{
+			Accelero_Task();
+			RTC_Task();
+			ADC_Task();
+			GSM_Task();
+			Command_Task();
+		}
+		else
+		{
+			Debug_Task();
+		}
 	}
 }
 
@@ -72,15 +82,15 @@ void Init_All()
   /* under the user button handler */
   HAL_NVIC_SetPriority(SysTick_IRQn, 0x0, 0x0); 
 	//
+	Watchdog_Init();
+	//
 	GPIO_Init();
 	//
 	RTC_Init();
 	//
-	ACCELERO_Init();
-	//
 	InitDebugUart();
 	//
-	DEBUG_PRINTF("\r\n\r\n\r\nSystem startup!\r\n");
+	ACCELERO_Init();
 	//
 	ADC_Init();
 	//
@@ -88,7 +98,10 @@ void Init_All()
 	// Init GSM
 	GSM_Init();
 	//	
-	Command_Init();	
+	Command_Init();
+	
+	// Ckeck debug mode
+	Check_Debug_Mode();
 }
 
 void ReInitPeriph()
@@ -118,7 +131,7 @@ void GPIO_Init(void)
 	__GPIOC_CLK_ENABLE();
 	
 	
-	// UART 1
+	// UART 1 aclereo
 	GPIO_InitStruct.Pin = GPIO_PIN_6 | GPIO_PIN_7;
   GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
@@ -127,7 +140,7 @@ void GPIO_Init(void)
 	
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);	
 	
-	//UART2
+	//UART2  gprs
 	GPIO_InitStruct.Pin = GPIO_PIN_2 | GPIO_PIN_3;
   GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
@@ -135,7 +148,7 @@ void GPIO_Init(void)
 	GPIO_InitStruct.Alternate = GPIO_AF4_USART2;
 	HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);	
 	
-		//UART3
+		//UART3 user
 	GPIO_InitStruct.Pin = GPIO_PIN_10 | GPIO_PIN_11;
   GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
@@ -144,8 +157,7 @@ void GPIO_Init(void)
 
 	HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);	
 	
-  
-		
+  		
 	// GPS_NRESET low - active
 	GPIO_InitStruct.Pin = GPIO_PIN_9;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
@@ -190,6 +202,15 @@ void GPIO_Init(void)
 	
 	HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);	
 	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_15, GPIO_PIN_SET);
+	
+	// Lamp port pin
+	GPIO_InitStruct.Pin = GPIO_PIN_0;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
+  GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
+	
+	HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);	
+	HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0, GPIO_PIN_SET);
 	
 	
 	

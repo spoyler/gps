@@ -162,12 +162,14 @@ boolean sim900_wait_for_resp(const char* resp, DataType type)
 	unsigned int timeout = 3000;
 	unsigned int chartimeout = 500;    
 	int sum = 0;
-	unsigned long timerStart, prevChar;    //prevChar is the time when the previous Char has been read.
-	timerStart = millis();
+	unsigned long timer_start, prev_char;    //prevChar is the time when the previous Char has been read.
+	prev_char = 0;
+	timer_start = millis();
 	int resp_size = strlen(resp);
 	while(1) {
 			if(sim900_check_readable()) {
 				str[sum] = uart->Instance->RDR; 			//LUart.Instance->TDR = str[sum];	
+				prev_char = millis();
 				if (str[sum] == resp[sum])
 					sum++;
 //				else
@@ -177,13 +179,13 @@ boolean sim900_wait_for_resp(const char* resp, DataType type)
 					return true;
 				
 			}
-			if ((unsigned long) (millis() - timerStart) > timeout) {
+			if ((unsigned long) (millis() - timer_start) > timeout) {
 					return false;
 			}
 			//If interchar Timeout => return FALSE. So we can return sooner from this function.
-//			if (((unsigned long) (millis() - prevChar) > chartimeout) && (prevChar != 0)) {
-//					return false;
-//			}
+			if (((unsigned long) (millis() - prev_char) > chartimeout) && (prev_char != 0)) {
+					return false;
+			}
 			
 	}
 	//If is a CMD, we will finish to read buffer.

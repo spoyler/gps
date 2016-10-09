@@ -40,6 +40,8 @@
 /* Includes ------------------------------------------------------------------*/
 #include "stm32l0xx_it.h"
 #include "debug.h"
+#include "watchdog.h"
+
 
     
 /** @addtogroup Interrupt_Handlers
@@ -136,6 +138,7 @@ void PendSV_Handler(void)
 void SysTick_Handler(void)
 {
   HAL_IncTick();
+	Watchdog_Refresh();
 }
 
 /******************************************************************************/

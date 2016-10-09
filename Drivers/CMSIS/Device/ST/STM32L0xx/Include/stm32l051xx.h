@@ -3473,7 +3473,7 @@ typedef struct
 #define RCC_CRS_IRQn      RCC_IRQn
 
 /* Aliases for __IRQHandler */
-#define RNG_LPUART1_IRQHandler         LPUART1_IRQHandler
+//#define RNG_LPUART1_IRQHandler         LPUART1_IRQHandler
 #define AES_LPUART1_IRQHandler         LPUART1_IRQHandler
 #define AES_RNG_LPUART1_IRQHandler     LPUART1_IRQHandler
 

@@ -11,6 +11,7 @@
 void ADC_Init(void);
 void ADC_Task(void);
 int32_t * Get_ADC_Data(void);
+void ADC_Debug();
 
 
 #endif

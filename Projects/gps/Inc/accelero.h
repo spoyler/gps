@@ -28,6 +28,7 @@ void Set_Gyro_Sleep_Mode(uint8_t new_mode);
 
 void EnableWakeupDetection(void);
 void DisableWakeupDetection(void);
+void ACC_Debug(void);
 
 
 #endif

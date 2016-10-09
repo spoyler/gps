@@ -65,6 +65,7 @@ uint32_t PushToAnswers(void * data, uint32_t size, uint32_t param);
 uint32_t ReadBufferAnsw(uint8_t ** pointer);
 uint8_t IsDataToSend();
 
+
 int Parse_Command(char * data, int size);
 uint16_t GetParamValue(uint8_t param);
 void DisableExternalDevices(void);
@@ -75,6 +76,7 @@ uint8_t GetWakeupSource(void);
 uint8_t GetChargingState(void);
 void ChargingOn(void);
 void ChargingOFF(void);
+void Command_Debug(void);
 
 
 

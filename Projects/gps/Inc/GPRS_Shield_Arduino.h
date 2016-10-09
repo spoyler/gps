@@ -50,13 +50,16 @@ typedef enum
 {
 	NOT_CONNECTED = 0,
 	CONNECTED = 1,
-	ERROR_IN_CONNECTION = 2
+	ERROR_IN_CONNECTION = 2,
+	NEED_TO_REBOOT = 3
 }TServerConnectionState;
 
-#define MAX_TRY_TO_CONNECT 10
+#define MAX_TRY_TO_CONNECT 3
+#define MAX_TRY_NEED_TO_REBOOT 20
 
-//#define DEFAULT_TIMEOUT 500
 #define CHART_TIMEOUT		100
+
+		void GSM_Debug();
 
 		void GSM_Task();
  

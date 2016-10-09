@@ -37,6 +37,7 @@
 #include "accelero.h"
 #include "adc.h"
 #include "command.h"
+#include "watchdog.h"
 
 UART_HandleTypeDef UartGSM;			// gsm uart
 
@@ -70,6 +71,19 @@ void itoa(int n, char * s)
 		sprintf(s, "%d", n);
  }
 
+ bool SetBoudrate(rate)
+ {
+	 bool result = false;
+	 const char * rate_cmd = "AT+IPR=";
+	 char command[16] = {0};
+	 sprintf(command, "%s%d\r\n", rate_cmd, rate);
+	 	 
+	 result = sim900_check_with_cmd(command, resp_ok, CMD);
+	 
+	 result &=sim900_check_with_cmd("AT&W\r\n", resp_ok, CMD);
+	 
+	 return result;
+ }
 
 
 void GSM_Init(void)//:gprsSerial(tx,rx)
@@ -102,37 +116,54 @@ void GSM_Init(void)//:gprsSerial(tx,rx)
 	powerUpDown();
 	DEBUG_PRINTF("Ok\r\n");
 
-
 	char c = 0;
 	char cc = 0;
+		
+	DEBUG_PRINTF("GSM baudrate adjusting...");
 	
-	DEBUG_PRINTF("UART GSM baudrate adjusting...");
-	while(1)
-	{		
-		while(!(UartGSM.Instance->ISR & UART_FLAG_TXE));
-		UartGSM.Instance->TDR = 'A';		
-		HAL_Delay(10);		
-		while (UartGSM.Instance->ISR & UART_FLAG_RXNE)
-		{
-			c = UartGSM.Instance->RDR;
-		}		
-		HAL_Delay(500);
-		while(!(UartGSM.Instance->ISR & UART_FLAG_TXE));
-		UartGSM.Instance->TDR = 'T';			
-		
-		HAL_Delay(10);
-		
-		while (UartGSM.Instance->ISR & UART_FLAG_RXNE)
-		{
-			cc = UartGSM.Instance->RDR;
+	sim900_flush_serial();
+	sim900_flush_serial();
+	sim900_flush_serial();
+	
+	if (!sim900_check_with_cmd("AT\r\n",resp_ok,CMD))
+	{
+		while(1)
+		{		
+			while(!(UartGSM.Instance->ISR & UART_FLAG_TXE));
+			UartGSM.Instance->TDR = 'A';		
+			HAL_Delay(10);		
+			while (UartGSM.Instance->ISR & UART_FLAG_RXNE)
+			{
+				c = UartGSM.Instance->RDR;
+			}		
+			HAL_Delay(500);
+			while(!(UartGSM.Instance->ISR & UART_FLAG_TXE));
+			UartGSM.Instance->TDR = 'T';			
+			
+			HAL_Delay(10);
+			
+			while (UartGSM.Instance->ISR & UART_FLAG_RXNE)
+			{
+				cc = UartGSM.Instance->RDR;
+			}
+			
+			if ((cc == 0x54) && (c == 0x41))
+					break;
+			
+			HAL_Delay(500);
 		}
-		
-		if ((cc == 0x54) && (c == 0x41))
-				break;
-		
-		HAL_Delay(500);
 	}
 	DEBUG_PRINTF("Ok\r\n");
+	
+	sim900_flush_serial();
+	sim900_flush_serial();
+	sim900_flush_serial();
+	sim900_flush_serial();
+	SetBoudrate(9600);
+	
+	sim900_flush_serial();
+	sim900_flush_serial();
+	sim900_flush_serial();
 	
 	DEBUG_PRINTF("Sending AT...");
 	while(!sim900_check_with_cmd("AT\r\n",resp_ok,CMD));
@@ -157,12 +188,27 @@ void GSM_Init(void)//:gprsSerial(tx,rx)
 	SetServerConnectionState(NOT_CONNECTED);
 	count_try_to_connect = 0;	
 }
+void GSM_Debug()
+{
+	DEBUG_PRINTF("Get signal level...");
+	GetSignalLevel();
+	DEBUG_PRINTF("\r\n");
+  
+	DEBUG_PRINTF("Check SIM status...");  
+	while(!checkSIMStatus());
+	DEBUG_PRINTF("Ok\r\n");
+}
 
 void GSM_Task()
 {
 	char * ptr_gps_msg = 0;
 
 	//if (Get_Accelero_State())
+	if (GetServerConnectionState() == NEED_TO_REBOOT)
+	{
+		DEBUG_PRINTF("Reboot GSM modul\r\n");
+		GSM_Init();
+	}
 	{
 		if (!is_connected())
 		{			
@@ -182,7 +228,13 @@ void GSM_Task()
 				if (count_try_to_connect < MAX_TRY_TO_CONNECT)
 					SetServerConnectionState(NOT_CONNECTED);
 				else
-					SetServerConnectionState(ERROR_IN_CONNECTION);
+					if ((count_try_to_connect >= MAX_TRY_TO_CONNECT) &&
+						 (count_try_to_connect < MAX_TRY_NEED_TO_REBOOT))
+					{
+						SetServerConnectionState(ERROR_IN_CONNECTION);
+					}
+					else
+						SetServerConnectionState(NEED_TO_REBOOT);
 			}
 		}
 		else //if (GetServerConnectionState() == CONNECTED)		
@@ -302,10 +354,59 @@ void GetSignalLevel()
 {
 		const char cmd[] = "AT+CSQ\r\n";
     char gprsBuffer[32] = {0};
-    int count = 0;    		
+    char * tmp_pos = 0;
+		char * tmp_pos_last = 0; 
+		char * pos_del = 0;
+		int rssi = 0;
+		int ber = 0;
 		sim900_send_cmd(cmd, strlen(cmd));
 		sim900_read_buffer(gprsBuffer,32,DEFAULT_TIMEOUT);
-		DEBUG_PRINTF("%s",gprsBuffer );
+
+		tmp_pos = gprsBuffer;
+		while(1)
+		{
+			tmp_pos = (char*)strstr(tmp_pos, "+CSQ: ");
+			if (tmp_pos != nullptr)
+			{
+				tmp_pos_last = tmp_pos;
+				tmp_pos += sizeof("+CSQ: ");
+			}
+			else
+				break;
+		}
+		tmp_pos = tmp_pos_last;
+		if(tmp_pos != nullptr)
+		{
+			tmp_pos += sizeof("+CSQ: ") - 1;
+			pos_del = (char*)strchr(tmp_pos, ',');
+			if (pos_del != nullptr)
+			{
+				char number[8] = {0};		
+				int size = (uint32_t)pos_del - (uint32_t)(tmp_pos);
+				size = size < 8 ? size : 8;
+				strncpy ( number, tmp_pos, size );
+				rssi = atoi(number) * 2 - 114;
+				
+				if (pos_del != nullptr)
+				{
+					pos_del += 1;
+					tmp_pos = nullptr;
+					tmp_pos = (char*)strchr(pos_del, '\r');
+					
+					if (tmp_pos != nullptr)
+					{
+						memset(number, 0, 8);
+						size = (uint32_t)tmp_pos - (uint32_t)(pos_del);
+						size = size < 8 ? size : 8;
+						strncpy ( number, pos_del, size );
+						ber = atoi(number);
+					}
+				}
+			}
+			DEBUG_PRINTF("\r\nRSSI = %ddBi, BER = %d",rssi, ber);
+		}
+		else
+			DEBUG_PRINTF("Error");
 }
   
 bool checkSIMStatus(void)
