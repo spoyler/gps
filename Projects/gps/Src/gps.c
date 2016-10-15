@@ -94,15 +94,19 @@ void Set_Output_Msg()
 	msg_pos += sprintf(&gps_output_message[msg_pos],"*%x\r\n", crc);
 	
 	//DEBUG_PRINTF(gps_output_message);
-		
-	GPS_Send_Message(gps_output_message);
-	init_start_time = HAL_GetTick();
-	while((HAL_GetTick() - init_start_time) < 3000)
+	
+	for (int i = 0; i < 3; i++)
 	{
-		if ((pmtk = Get_GPS_Message(PMTK001)) != nullptr)
+		GPS_Send_Message(gps_output_message);
+		init_start_time = HAL_GetTick();
+		while((HAL_GetTick() - init_start_time) < 1000)
 		{
-			DEBUG_PRINTF("Ok\r\n");
-			break;
+			if ((pmtk = Get_GPS_Message(PMTK001)) != nullptr)
+			{
+				DEBUG_PRINTF("Ok\r\n");
+				i = 4;
+				break;
+			}
 		}
 	}
 	if (pmtk == nullptr)

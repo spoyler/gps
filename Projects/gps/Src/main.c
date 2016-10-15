@@ -49,12 +49,12 @@ uint32_t wdt_time = 0;
   */
 int main(void)
 {
-	wdt_time = HAL_GetTick();
+	
 	Init_All();
 	
 	while(1)
 	{
-		wdt_time = HAL_GetTick();
+		//Watchdog_Refresh();
 		if (!Get_Debug_State(DBG))
 		{
 			Accelero_Task();
@@ -74,15 +74,15 @@ void Init_All()
 {
 	  /* STM32xx HAL library initialization */
   HAL_Init();
-  
-  /* Configure the system clock */
+	/* Configure the system clock */
   SystemClock_Config();
-   
+	
   /* Set Systick Interrupt to the highest priority to have HAL_Delay working*/
   /* under the user button handler */
-  HAL_NVIC_SetPriority(SysTick_IRQn, 0x0, 0x0); 
+	HAL_NVIC_SetPriority(SysTick_IRQn, 0x0, 0x0);    
+	//wdt_time = HAL_GetTick();
 	//
-	Watchdog_Init();
+	//Watchdog_Init();
 	//
 	GPIO_Init();
 	//

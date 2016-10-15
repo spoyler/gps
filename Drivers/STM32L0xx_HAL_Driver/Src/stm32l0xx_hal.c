@@ -52,6 +52,7 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "stm32l0xx_hal.h"
+#include "debug.h"
 
 /** @addtogroup STM32L0xx_HAL_Driver
   * @{
@@ -81,7 +82,7 @@
 #define IDCODE_DEVID_MASK    ((uint32_t)0x00000FFF)
 /* Private macro -------------------------------------------------------------*/
 /* Private variables ---------------------------------------------------------*/
-static __IO uint32_t uwTick;
+static __IO uint32_t uwTick = 0;
 /* Private function prototypes -----------------------------------------------*/
 /* Private functions ---------------------------------------------------------*/
 

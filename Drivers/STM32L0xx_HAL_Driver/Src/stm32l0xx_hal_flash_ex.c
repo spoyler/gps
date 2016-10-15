@@ -100,7 +100,7 @@ static FlagStatus FLASH_OB_GetRDP(void);
 static uint8_t FLASH_OB_GetBOR(void);
 static HAL_StatusTypeDef FLASH_OB_WRPConfig(uint32_t OB_WRP, FunctionalState NewState);
 static HAL_StatusTypeDef FLASH_OB_RDP_LevelConfig(uint8_t OB_RDP);
-static HAL_StatusTypeDef FLASH_OB_UserConfig(uint8_t OB_IWDG, uint8_t OB_STOP, uint8_t OB_STDBY);
+//static HAL_StatusTypeDef FLASH_OB_UserConfig(uint8_t OB_IWDG, uint8_t OB_STOP, uint8_t OB_STDBY);
 static HAL_StatusTypeDef FLASH_OB_BOR_LevelConfig(uint8_t OB_BOR);
 
 /* Aliases for legacy HAL versions compatibility */
@@ -717,7 +717,7 @@ static HAL_StatusTypeDef FLASH_OB_RDP_LevelConfig(uint8_t OB_RDP)
   * @retval FLASH Status: The returned value can be: 
   *         FLASH_ERROR_PROGRAM, FLASH_ERROR_WRP, FLASH_COMPLETE or FLASH_TIMEOUT.
   */
-static HAL_StatusTypeDef FLASH_OB_UserConfig(uint8_t OB_IWDG, uint8_t OB_STOP, uint8_t OB_STDBY)
+HAL_StatusTypeDef FLASH_OB_UserConfig(uint8_t OB_IWDG, uint8_t OB_STOP, uint8_t OB_STDBY)
 {
   HAL_StatusTypeDef status = HAL_OK; 
   uint32_t tmp = 0, tmp1 = 0;

@@ -159,7 +159,7 @@ void GSM_Init(void)//:gprsSerial(tx,rx)
 	sim900_flush_serial();
 	sim900_flush_serial();
 	sim900_flush_serial();
-	SetBoudrate(9600);
+
 	
 	sim900_flush_serial();
 	sim900_flush_serial();
@@ -183,6 +183,8 @@ void GSM_Init(void)//:gprsSerial(tx,rx)
 	
 	const char manual_data_cmd[] = "AT+CIPRXGET=1\r\n";	
 	sim900_check_with_cmd(manual_data_cmd, "OK\r\n", CMD);
+	
+	SetBoudrate(9600);
 		
 	//debug_simm800(&UartGSM);
 	SetServerConnectionState(NOT_CONNECTED);

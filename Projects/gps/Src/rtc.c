@@ -11,6 +11,7 @@
 #include "main.h"
 #include "command.h"
 #include "GPRS_Shield_Arduino.h"
+#include "watchdog.h"
 
 const uint32_t START_YEAR = 1970;
 const uint32_t BASE_YEAR = 2000;
@@ -519,6 +520,7 @@ void RTC_EnterStopMode(uint32_t time_sec)
 		/*## Setting the Wake up time ############################################*/
 		HAL_RTCEx_SetWakeUpTimer_IT(&RtcHandle, time_sec, RTC_WAKEUPCLOCK_CK_SPRE_16BITS);
 
+		Watchdog_Refresh();
 		/* Enter Stop Mode */
 		HAL_PWR_EnterSTOPMode(PWR_LOWPOWERREGULATOR_ON, PWR_STOPENTRY_WFI);
 	}
@@ -586,6 +588,7 @@ void RTC_IRQHandler(void)
 
 void HAL_RTC_AlarmAEventCallback(RTC_HandleTypeDef *hrtc)
 {	
+	Watchdog_Refresh();
 	SetEventState(EVENT_SLEEP, EVENT_ACTIVE);
 	sleep_event = EVENT_ACTIVE;
 }
@@ -663,6 +666,7 @@ void RTC_Task()
   */
 void HAL_RTCEx_WakeUpTimerEventCallback(RTC_HandleTypeDef *hrtc)
 {
+	Watchdog_Refresh();
   /* Clear Wake Up Flag */
   __HAL_PWR_CLEAR_FLAG(PWR_FLAG_WU);
 	SetWakeupSource(WAKEUP_SOURCE_TIMER);

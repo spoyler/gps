@@ -71,13 +71,9 @@ int sim900_wait_readable (int wait_time)
 void sim900_flush_serial()
 {
 	char c = 0;
-	if (uart->Instance->ISR & UART_FLAG_ORE)
-	{
-		uart->Instance->ICR = (uart->Instance->ICR | USART_ISR_ORE);
-	}
   while(sim900_check_readable())
 	{
-			char c = uart->Instance->RDR; 			//LUart.Instance->TDR = c;	
+			char c = uart->Instance->RDR; 			//LUart.Instance->TDR = c;
   }
 }
 

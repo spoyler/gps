@@ -49,6 +49,7 @@
 /** @addtogroup STM32L0xx_HAL_Driver
   * @{
   */
+HAL_StatusTypeDef FLASH_OB_UserConfig(uint8_t OB_IWDG, uint8_t OB_STOP, uint8_t OB_STDBY);
 
 /** @addtogroup FLASHEx
   * @{

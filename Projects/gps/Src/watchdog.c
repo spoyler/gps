@@ -5,12 +5,15 @@
 
 #include "watchdog.h"
 
+//WWDG_HandleTypeDef   WatchdogHandle;
 WWDG_HandleTypeDef   WatchdogHandle;
 extern uint32_t wdt_time;
 
+FLASH_OBProgramInitTypeDef FlashHandle;
+
 void Watchdog_Init()
 {  
-	__WWDG_CLK_ENABLE();
+	//__WWDG_CLK_ENABLE();
   /*##-2- Configure the WWDG peripheral ######################################*/
   /* WWDG clock counter = (PCLK1 (32MHz)/4096)/8) = 976.6 Hz (~1024 us) 
      WWDG Window value = 80 means that the WWDG counter should be refreshed only 
@@ -25,13 +28,13 @@ void Watchdog_Init()
 
   HAL_WWDG_Init(&WatchdogHandle);
 
-
   /*##-3- Start the WWDG #####################################################*/ 
   HAL_WWDG_Start(&WatchdogHandle);
+
 }
 
 void Watchdog_Refresh(void)
 {
-	if ((HAL_GetTick() - wdt_time) < 60000)
-		HAL_WWDG_Refresh(&WatchdogHandle, 127);
+	//HAL_WWDG_Refresh(&WatchdogHandle);
 }
+
