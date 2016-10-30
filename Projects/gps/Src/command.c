@@ -14,7 +14,7 @@
 #include "adc.h"
 #include "rtc.h"
 
-const uint32_t buffer_size = 8;
+const uint32_t buffer_size = 4;
 const uint32_t buffer_lenght = 256;
 const uint32_t buffer_lenght_answ = 32;
 
@@ -105,6 +105,9 @@ void Command_Init()
 	system_info.tracker_id = 1;
 	system_info.sw_version = 1;
 	system_info.hw_version = 1;
+	system_info.host_port = 8121;
+	snprintf(system_info.host_name, 32, "cli-1.srv.velogorod.org");
+	
 	
 	
 	// set period of data send 10 sec
@@ -119,6 +122,9 @@ void Command_Init()
 	ServerCommands[ALARM_TIME] = 30;
 	
 	last_tick = HAL_GetTick();
+	
+	DEBUG_PRINTF("Tracker ID = %d\r\n", system_info.tracker_id);
+	DEBUG_PRINTF("Server address = %s:%d\r\n", system_info.host_name, system_info.host_port);
 }
 
 uint32_t PushToBuffer(uint32_t param, const char * string, ...  )

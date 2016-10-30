@@ -2395,7 +2395,7 @@ static DrvStatusTypeDef LSM6DS3_X_Enable_Wake_Up_Detection( DrvContextTypeDef *h
   }
   
   /* Set wake up threshold. */
-  if ( LSM6DS3_ACC_GYRO_W_WK_THS( (void *)handle, 0x02 ) == MEMS_ERROR )
+  if ( LSM6DS3_ACC_GYRO_W_WK_THS( (void *)handle, 0x1F ) == MEMS_ERROR )
   {
     return COMPONENT_ERROR;
   }

@@ -13,7 +13,9 @@ typedef struct
 {
 	uint32_t tracker_id;
 	uint8_t  hw_version;
-	uint8_t  sw_version;		
+	uint8_t  sw_version;
+	uint16_t host_port;	
+	char host_name[32];	
 }SSystemInfo;
 
 enum

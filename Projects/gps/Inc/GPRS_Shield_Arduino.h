@@ -54,6 +54,20 @@ typedef enum
 	NEED_TO_REBOOT = 3
 }TServerConnectionState;
 
+typedef enum
+{
+	IP_INITIAL = 0,
+	IP_START = 1,
+  IP_CONFIG = 2,
+  IP_GPRSACT = 3,
+  IP_STATUS = 4,
+  TCP_CONNECTING = 5,
+  TCP_CONNECT_OK = 6,
+  TCP_CLOSING = 7,
+  TCP_CLOSED = 8,
+  PDP_DEACT = 9
+}TCP_STATE;
+
 #define MAX_TRY_TO_CONNECT 3
 #define MAX_TRY_NEED_TO_REBOOT 20
 
@@ -242,7 +256,7 @@ typedef enum
     /** Check if a tcp link is active
      *  @returns true if successful
      */
-    bool is_connected(void);
+		 char is_connected(void);
 	
 	/** Close a tcp connection
      *  @returns true if successful
@@ -302,7 +316,6 @@ typedef enum
     char* getIPAddress(void);
     unsigned long getIPnumber(void);	
  //   bool getLocation(const __FlashStringHelper *apn, float *longitude, float *latitude);
-	
 
     bool checkSIMStatus(void);
 		
@@ -315,4 +328,6 @@ typedef enum
 		void SetServerConnectionState(uint8_t new_state);
 		
 		uint8_t GetServerConnectionState(void);
+		
+		void Read_Messages(void);
 #endif

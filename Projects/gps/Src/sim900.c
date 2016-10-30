@@ -79,7 +79,7 @@ void sim900_flush_serial()
 
 void sim900_read_buffer(char *buffer, int count, unsigned int timeout/*, unsigned int chartimeout*/)
 {
-	const int chartimeout = 500;
+	const int chartimeout = 50;
 	int i = 0;
 	unsigned long timerStart, prevChar;
 	char c = 0;
@@ -102,9 +102,9 @@ void sim900_read_buffer(char *buffer, int count, unsigned int timeout/*, unsigne
 		if ((unsigned long) (millis() - timerStart) > timeout * 1000UL) 
 			break;
 	//If interchar Timeout => return FALSE. So we can return sooner from this function. Not DO it if we dont recieve at least one char (prevChar <> 0)
-	//        if (((unsigned long) (millis() - prevChar) > chartimeout) && (prevChar != 0)) {
-	//            break;
-	//        }				
+		if (((unsigned long) (millis() - prevChar) > chartimeout) && (prevChar != 0)) {
+				break;
+		}				
 	}
 }
 

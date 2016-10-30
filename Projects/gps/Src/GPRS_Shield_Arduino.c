@@ -39,6 +39,9 @@
 #include "command.h"
 #include "watchdog.h"
 
+
+extern SSystemInfo system_info;
+extern const char uin[];
 UART_HandleTypeDef UartGSM;			// gsm uart
 
 
@@ -47,10 +50,9 @@ uint32_t _ip;
 char ip_string[16]; //XXX.YYY.ZZZ.WWW + \0
 const char resp_ok[] = "OK\r\n";
 
-const char host_name[] = "paulfertser.info";
-const int host_port = 10123;
 
-uint8_t tmp_data[512];
+const uint16_t tmp_data_size = 512;
+uint8_t tmp_data[tmp_data_size];
 
 uint8_t is_not_first_data_send = 0;
 uint8_t server_connection_state = 0;
@@ -59,6 +61,11 @@ extern char uin_string[32];
 extern uint8_t uin_string_size;
 extern const char eof[];
 
+const char traker_id[] = "$traker_id=";
+const char server_addr[] = "$server_addr=";
+const char read_messages_intervel = 10;
+uint32_t last_read_messages_time = 0;
+bool wait_connection = false;
 
 
 void delay(int time)
@@ -184,6 +191,9 @@ void GSM_Init(void)//:gprsSerial(tx,rx)
 	const char manual_data_cmd[] = "AT+CIPRXGET=1\r\n";	
 	sim900_check_with_cmd(manual_data_cmd, "OK\r\n", CMD);
 	
+	const char text_mode_sms[] = "AT+CMGF=1\r\n";
+	sim900_check_with_cmd(text_mode_sms, "OK\r\n", CMD);
+	
 	SetBoudrate(9600);
 		
 	//debug_simm800(&UartGSM);
@@ -204,135 +214,170 @@ void GSM_Debug()
 void GSM_Task()
 {
 	char * ptr_gps_msg = 0;
+	bool data_not_send = false;
+	uint8_t tcp_state =  IP_INITIAL;
+	bool send_eof = false;
 
 	//if (Get_Accelero_State())
+	
+	if ((HAL_GetTick() - last_read_messages_time) > read_messages_intervel*1000)
+	{
+		Read_Messages();
+		last_read_messages_time = HAL_GetTick();
+	}
+	
 	if (GetServerConnectionState() == NEED_TO_REBOOT)
 	{
 		DEBUG_PRINTF("Reboot GSM modul\r\n");
 		GSM_Init();
 	}
+	
 	{
-		if (!is_connected())
+		tcp_state = is_connected();
+		if (tcp_state == TCP_CLOSED)
 		{			
-			DEBUG_PRINTF("Connecting to %s:%d... ", host_name, host_port);
-			if (connect(TCP,host_name, host_port, 3, 100))
+			is_not_first_data_send = 0;
+			DEBUG_PRINTF("Connecting to %s:%d... ", system_info.host_name, system_info.host_port);
+			if (connect(TCP,system_info.host_name, system_info.host_port, 1, 50))
 			{
 				DEBUG_PRINTF("Ok\r\n");
 				is_not_first_data_send = 0;
 				SetServerConnectionState(CONNECTED);
-				count_try_to_connect = 0;
+				wait_connection = false;
 			}
 			else
 			{
-				DEBUG_PRINTF("Error\r\n");
-				
-				count_try_to_connect++;
-				if (count_try_to_connect < MAX_TRY_TO_CONNECT)
-					SetServerConnectionState(NOT_CONNECTED);
-				else
-					if ((count_try_to_connect >= MAX_TRY_TO_CONNECT) &&
-						 (count_try_to_connect < MAX_TRY_NEED_TO_REBOOT))
-					{
-						SetServerConnectionState(ERROR_IN_CONNECTION);
-					}
+				tcp_state = is_connected();
+				if (tcp_state != TCP_CONNECTING 
+					&& tcp_state != TCP_CONNECT_OK)
+				{
+					DEBUG_PRINTF("Error\r\n");
+					
+					wait_connection = false;
+					count_try_to_connect++;
+					if (count_try_to_connect < MAX_TRY_TO_CONNECT)
+						SetServerConnectionState(NOT_CONNECTED);
 					else
-						SetServerConnectionState(NEED_TO_REBOOT);
+						if ((count_try_to_connect >= MAX_TRY_TO_CONNECT) &&
+							 (count_try_to_connect < MAX_TRY_NEED_TO_REBOOT))
+						{
+							SetServerConnectionState(ERROR_IN_CONNECTION);
+						}
+						else
+							SetServerConnectionState(NEED_TO_REBOOT);
+				}
+				else
+					wait_connection = true;
 			}
 		}
-		else //if (GetServerConnectionState() == CONNECTED)		
+		else 
+		if (is_connected() == TCP_CONNECT_OK)		
 		{			
-			while(1) 
+			if (wait_connection)
+			{
+				wait_connection = false;
+				DEBUG_PRINTF("Ok\r\n");
+			}
+			//while(1) 
 			{
 				// send the data
+				count_try_to_connect = 0;
 				uint8_t flags = 0;
 				uint8_t * data = (uint8_t*)NULL;
 				uint32_t data_size = ReadBuffer(&data, &flags);
+				memset(tmp_data, 0, tmp_data_size);
+				uint16_t tmp_data_pos = 0;
 				
 			
 				if ((data_size > 0) && data != NULL)
 				{
+					HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_15);
 					if (!is_not_first_data_send)
 					{
 						// send uin
-						if(send(uin_string, uin_string_size) == uin_string_size)
-							is_not_first_data_send = 1;
+						tmp_data_pos = sprintf((char *)tmp_data, "%s", uin_string);
+						is_not_first_data_send = 1;
 					}
 								
-					data[data_size] = 0;
-					DEBUG_PRINTF("Data send %d...", data_size);
-					if(send(data, data_size) == data_size)
+					tmp_data_pos += sprintf((char *)&tmp_data[tmp_data_pos], "%s", data);
+					data[data_size] = 0;		
+					
+					if (!IsDataToSend())
+					{
+						// if we have not more data, send "eof"
+						tmp_data_pos += sprintf((char *)&tmp_data[tmp_data_pos], "%s", eof);
+						send_eof  = true;
+					}
+						
+					DEBUG_PRINTF("%s", tmp_data);
+					DEBUG_PRINTF("Data send %d...", tmp_data_pos);
+					if(send((const char*)tmp_data, tmp_data_pos) == tmp_data_pos)
 					{
 						DEBUG_PRINTF("Ok\r\n");
-						
-						if (!IsDataToSend())
-						{
-							// if we have not more data, send "eof"
-							data_size = strlen(eof);
-							if (send(eof, data_size) == data_size)
-							{
-								DEBUG_PRINTF("End of data, send \"EOF\"\r\n");
-							}
-							else
-							{
-								is_not_first_data_send = 0;
-							}
-						}
-						// check message on events
-						for (int i = EVENT_FREE_FALL; i < MAX_EVENTS; i++)
-						{
-							if ((i == EVENT_SLEEP) || (i == EVENT_WAKEUP))
-								SetEventState(i, EVENT_SEND);
-							else
-								SetEventState(i, EVENT_NONE);
-						}
 					}
 					else
 					{
+						close();
+						data_not_send = true;
 						DEBUG_PRINTF("Error\r\n");
-						is_not_first_data_send = 0;
+					}
+						
+					// check message on events
+					for (int i = EVENT_FREE_FALL; i < MAX_EVENTS; i++)
+					{
+						if ((i == EVENT_SLEEP) || (i == EVENT_WAKEUP))
+							SetEventState(i, EVENT_SEND);
+						else
+							SetEventState(i, EVENT_NONE);
 					}
 				}
-				else
-					break;
-
+				HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_15);
+				
+				if (data_not_send)
+				{
+					return;
+				}
 			
 				//recive data
-				uint32_t start_tick = HAL_GetTick();
-				while((data_size =  recv(tmp_data, 256)) == -1)
+				if (send_eof)
 				{
-					if ((HAL_GetTick() - start_tick ) > 2000)
-						break;
-				}
+					uint32_t start_tick = HAL_GetTick();
+					while((data_size =  recv((char *)tmp_data, 256)) == -1)
+					{
+						if ((HAL_GetTick() - start_tick ) > 2000)
+							break;
+					}
 
-				DEBUG_PRINTF("RX_DATA = %d\r\n", data_size);
-				
-				uint8_t * answer = (uint8_t *) nullptr;
-				
-				data_size = ReadBufferAnsw(&answer);
-				
-				if (data_size > 0)
-				{
-					DEBUG_PRINTF("Send answer...");
-					if(send(answer, data_size) == data_size)
+					DEBUG_PRINTF("RX_DATA = %d\r\n", data_size);
+					
+					uint8_t * answer = (uint8_t *) nullptr;
+					
+					data_size = ReadBufferAnsw(&answer);
+					
+					if (data_size > 0)
 					{
-						DEBUG_PRINTF("Ok\r\n");		
-						DEBUG_PRINTF("Connection close\r\n");
-						close();					
-						SetServerConnectionState(NOT_CONNECTED);
+						DEBUG_PRINTF("%s", answer);
+						DEBUG_PRINTF("Send answer...");
+						if(send(answer, data_size) == data_size)
+						{
+							DEBUG_PRINTF("Ok\r\n");		
+							DEBUG_PRINTF("Connection close\r\n");
+							close();					
+						}
+						else
+						{
+							close();
+							is_not_first_data_send = 0;
+							DEBUG_PRINTF("Error\r\n");
+						}
 					}
-					else
-					{
-						is_not_first_data_send = 0;
-						DEBUG_PRINTF("Error\r\n");
-					}
-				}			
+				}				
 			}								
 		}			
 	}
-	if (is_connected() && (GetEventState(EVENT_SLEEP) == EVENT_SEND))
+	if (is_connected() == TCP_CLOSED && (GetEventState(EVENT_SLEEP) == EVENT_SEND))
 	{
 		close();
-		SetServerConnectionState(NOT_CONNECTED);
 	}
 }
 
@@ -387,7 +432,7 @@ void GetSignalLevel()
 				int size = (uint32_t)pos_del - (uint32_t)(tmp_pos);
 				size = size < 8 ? size : 8;
 				strncpy ( number, tmp_pos, size );
-				rssi = atoi(number) * 2 - 114;
+				rssi = atoi(number) * 2 - 113;
 				
 				if (pos_del != nullptr)
 				{
@@ -405,7 +450,7 @@ void GetSignalLevel()
 					}
 				}
 			}
-			DEBUG_PRINTF("\r\nRSSI = %ddBi, BER = %d",rssi, ber);
+			DEBUG_PRINTF("\r\nRSSI = %ddBm, BER = %d",rssi, ber);
 		}
 		else
 			DEBUG_PRINTF("Error");
@@ -433,204 +478,38 @@ bool checkSIMStatus(void)
 		return false;
 }
 
-bool callUp(char *number)
-{
-    //char cmd[24];
-    if(!sim900_check_with_cmd("AT+COLP=1\r\n","OK\r\n",CMD)) {
-        return false;
-    }
-    delay(1000);
-	//HACERR quitar SPRINTF para ahorar memoria ???
-  //sprintf(cmd,"ATD%s;\r\n", number);
-  //sim900_send_cmd(cmd);
-	sim900_send_cmd("ATD", sizeof("ATD"));
-	sim900_send_cmd(number, strlen(number));
-	sim900_send_cmd(";\r\n", 3);
-    return true;
-}
-
-void answer(void)
-{
-    sim900_send_cmd("ATA\r\n", sizeof("ATA\r\n"));  //TO CHECK: ATA doesnt return "OK" ????
-}
-
-bool hangup(void)
-{
-    return sim900_check_with_cmd("ATH\r\n","OK\r\n",CMD);
-}
-
-bool disableCLIPring(void)
-{
-    return sim900_check_with_cmd("AT+CLIP=0\r\n","OK\r\n",CMD);
-}
-
-bool getSubscriberNumber(char *number)
-{
-	//AT+CNUM								--> 7 + CR = 8
-	//+CNUM: "","+628157933874",145,7,4		--> CRLF + 45 + CRLF = 49
-	//										-->
-	//OK									--> CRLF + 2 + CRLF = 6
-
-    int i = 0;
-    char gprsBuffer[65];
-    char *p,*s;
-	sim900_flush_serial();
-    sim900_send_cmd("AT+CNUM\r\n", sizeof("AT+CNUM\r\n"));
-    sim900_clean_buffer(gprsBuffer,65);
-    sim900_read_buffer(gprsBuffer,65,DEFAULT_TIMEOUT);
-	//Serial.print(gprsBuffer);
-    if(NULL != ( s = strstr(gprsBuffer,"+CNUM:"))) {
-        s = strstr((char *)(s),",");
-        s = s + 2;  //We are in the first phone number character 
-        p = strstr((char *)(s),"\""); //p is last character """
-        if (NULL != s) {
-            i = 0;
-            while (s < p) {
-              number[i++] = *(s++);
-            }
-            number[i] = '\0';
-        }
-        return true;
-    }  
-    return false;
-}
-
-bool isCallActive(char *number)
-{
-    char gprsBuffer[46];  //46 is enough to see +CPAS: and CLCC:
-    char *p, *s;
-    int i = 0;
-
-    sim900_send_cmd("AT+CPAS\r\n", sizeof("AT+CPAS\r\n"));
-    /*Result code:
-        0: ready
-        2: unknown
-        3: ringing
-        4: call in progress
-    
-      AT+CPAS   --> 7 + 2 = 9 chars
-                --> 2 char              
-      +CPAS: 3  --> 8 + 2 = 10 chars
-                --> 2 char
-      OK        --> 2 + 2 = 4 chars
-    
-      AT+CPAS
-      
-      +CPAS: 0
-      
-      OK
-    */
-
-    sim900_clean_buffer(gprsBuffer,29);
-    sim900_read_buffer(gprsBuffer,27, 0);
-    //HACERR cuando haga lo de esperar a OK no me haría falta esto
-    //We are going to flush serial data until OK is recieved
-    sim900_wait_for_resp("OK\r\n", CMD);    
-    //Serial.print("Buffer isCallActive 1: ");Serial.println(gprsBuffer);
-    if(NULL != ( s = strstr(gprsBuffer,"+CPAS:"))) {
-      s = s + 7;
-      if (*s != '0') {
-         //There is something "running" (but number 2 that is unknow)
-         if (*s != '2') {
-           //3 or 4, let's go to check for the number
-           sim900_send_cmd("AT+CLCC\r\n", sizeof("AT+CLCC\r\n"));
-           /*
-           AT+CLCC --> 9
-           
-           +CLCC: 1,1,4,0,0,"656783741",161,""
-           
-           OK  
-
-           Without ringing:
-           AT+CLCC
-           OK              
-           */
-
-           sim900_clean_buffer(gprsBuffer,46);
-           sim900_read_buffer(gprsBuffer,45, 0);
-			//Serial.print("Buffer isCallActive 2: ");Serial.println(gprsBuffer);
-           if(NULL != ( s = strstr(gprsBuffer,"+CLCC:"))) {
-             //There is at least one CALL ACTIVE, get number
-             s = strstr((char *)(s),"\"");
-             s = s + 1;  //We are in the first phone number character            
-             p = strstr((char *)(s),"\""); //p is last character """
-             if (NULL != s) {
-                i = 0;
-                while (s < p) {
-                    number[i++] = *(s++);
-                }
-                number[i] = '\0';            
-             }
-             //I need to read more buffer
-             //We are going to flush serial data until OK is recieved
-             return sim900_wait_for_resp("OK\r\n", CMD); 
-           }
-         }
-      }        
-    } 
-    return false;
-}
 
 bool getDateTime(char *buffer)
 {
-	//AT+CCLK?						--> 8 + CR = 9
+	//AT+CCLK? --> 8 + CR = 9
 	//+CCLK: "14/11/13,21:14:41+04"	--> CRLF + 29+ CRLF = 33
 	//								
-	//OK							--> CRLF + 2 + CRLF =  6
-
-    uint8_t i = 0;
-    char gprsBuffer[50];
-    char *p,*s;
-	sim900_flush_serial();
-    sim900_send_cmd("AT+CCLK?\r", sizeof("AT+CCLK?\r"));
-    sim900_clean_buffer(gprsBuffer,50);
-    sim900_read_buffer(gprsBuffer,50,DEFAULT_TIMEOUT);
-    if(NULL != ( s = strstr(gprsBuffer,"+CCLK:"))) {
-        s = strstr((char *)(s),"\"");
-        s = s + 1;  //We are in the first phone number character 
-        p = strstr((char *)(s),"\""); //p is last character """
-        if (NULL != s) {
-            i = 0;
-            while (s < p) {
-              buffer[i++] = *(s++);
-            }
-            buffer[i] = '\0';            
-        }
-        return true;
-    }  
-    return false;
-}
-
-bool getSignalStrength(int *buffer)
-{
-	//AT+CSQ						--> 6 + CR = 10
-	//+CSQ: <rssi>,<ber>			--> CRLF + 5 + CRLF = 9						
-	//OK							--> CRLF + 2 + CRLF =  6
+	//OK --> CRLF + 2 + CRLF =  6
 
 	uint8_t i = 0;
-	char gprsBuffer[26];
-	char *p, *s;
-	char buffers[4];
+	char gprsBuffer[50];
+	char *p,*s;
 	sim900_flush_serial();
-	sim900_send_cmd("AT+CSQ\r", sizeof("AT+CSQ\r"));
-	sim900_clean_buffer(gprsBuffer, 26);
-	sim900_read_buffer(gprsBuffer, 26, DEFAULT_TIMEOUT);
-	if (NULL != (s = strstr(gprsBuffer, "+CSQ:"))) {
-		s = strstr((char *)(s), " ");
-		s = s + 1;  //We are in the first phone number character 
-		p = strstr((char *)(s), ","); //p is last character """
-		if (NULL != s) {
-			i = 0;
-			while (s < p) {
-				buffers[i++] = *(s++);
+	sim900_send_cmd("AT+CCLK?\r", sizeof("AT+CCLK?\r"));
+	sim900_clean_buffer(gprsBuffer,50);
+	sim900_read_buffer(gprsBuffer,50,DEFAULT_TIMEOUT);
+	if(NULL != ( s = strstr(gprsBuffer,"+CCLK:"))) {
+			s = strstr((char *)(s),"\"");
+			s = s + 1;  //We are in the first phone number character 
+			p = strstr((char *)(s),"\""); //p is last character """
+			if (NULL != s) {
+					i = 0;
+					while (s < p) {
+						buffer[i++] = *(s++);
+					}
+					buffer[i] = '\0';            
 			}
-			buffers[i] = '\0';
-		}
-		*buffer = atoi(buffers);
-		return true;
-	}
+			return true;
+	}  
 	return false;
 }
+
+
 
 bool sendUSSDSynchronous(char *ussdCommand, char *resultcode, char *response)
 {
@@ -701,7 +580,6 @@ bool connect(Protocol ptl,const char * host, int port, int timeout, int chartime
         return false;
     }
     
-
     sim900_send_cmd(cmd, size);
     sim900_read_buffer(resp, 128, timeout);
     if((strstr(resp,"CONNECT OK") != NULL) ||
@@ -712,25 +590,40 @@ bool connect(Protocol ptl,const char * host, int port, int timeout, int chartime
 }
 
 
-bool is_connected(void)
+char is_connected(void)
 {
     char resp[96] = {0};
     sim900_send_cmd("AT+CIPSTATUS\r\n", strlen("AT+CIPSTATUS\r\n"));
     sim900_read_buffer(resp,sizeof(resp),DEFAULT_TIMEOUT);
     if(NULL != strstr(resp,"STATE: CONNECT OK")) {
         //+STATE: CONNECT OK
-        return true;
-    } else {
-        //+CIPSTATUS: 1,0,"TCP","216.52.233.120","80","CLOSED"
-        //+CIPSTATUS: 0,,"","","","INITIAL"
-        return false;
-    }
+        return TCP_CONNECT_OK;
+		}
+		else
+		{				
+			if (NULL != strstr(resp,"STATE: TCP CONNECTING")
+				//||NULL != strstr(resp,"STATE: IP INITIAL")
+				||NULL != strstr(resp,"STATE: IP START")
+				||NULL != strstr(resp,"STATE: IP CONFIG") 
+				||NULL != strstr(resp,"STATE: IP GPRSACT")
+				||NULL != strstr(resp,"STATE: IP STATUS"))
+			{
+				return TCP_CONNECTING;
+			}
+			else 
+			{
+			//+CIPSTATUS: 1,0,"TCP","216.52.233.120","80","CLOSED"
+			//+CIPSTATUS: 0,,"","","","INITIAL"
+				return TCP_CLOSED;
+			}				
+		}
 }
 
 bool close()
 {
+		SetServerConnectionState(NOT_CONNECTED);
     // if not connected, return
-    if (!is_connected()) {
+    if (is_connected() == TCP_CLOSED) {
         return true;
     }
     return sim900_check_with_cmd("AT+CIPCLOSE\r\n", "CLOSE OK\r\n", CMD);
@@ -753,10 +646,10 @@ int wait_writeable(int req_size)
 
 int send(const char * str, int len)
 {
-	const uint32_t wait_data_ok = 2000;
+	const uint32_t wait_data_ok = 10000;
   char cmd[256] = {0};
-	
-	DEBUG_PRINTF("%s", str);
+		
+	//DEBUG_PRINTF("%s", str);
 	if(len > 0)
 	{
 		sprintf(cmd,"AT+CIPSEND=%d\r\n",len);
@@ -902,6 +795,191 @@ void SetServerConnectionState(uint8_t new_state)
 uint8_t GetServerConnectionState(void)
 {
 	return server_connection_state;
+}
+
+void Delete_Message(uint32_t message_index, char * message_type)
+{
+	char cmd[16] = {0};
+	
+	snprintf(cmd, 16, "AT+CMGD=%d,\"%s\"\r\n", message_index, message_type);
+	sim900_check_with_cmd(cmd,"OK\r\n",CMD);
+}
+
+void Read_Messages()
+{
+	const uint16_t tmp_string_size = 64;
+	char string[tmp_string_size] = {0};
+	char size = 0;
+	const char * answer = "+CMGL: ";	
+	const char * message_type = "REC UNREAD";
+	uint8_t mode = 1;
+	const char timeout = 1;
+	uint8_t num_messages = 0;
+	uint16_t indexes[tmp_string_size] = {0};
+	
+	
+	
+	// get list of all unread messages
+	size = sprintf(string, "AT+CMGL=\"%s\",%d\r\n", message_type, mode);
+	sim900_send_cmd(string, size);
+	
+	// parse sms list
+	// save index of sms, samples of answer
+	// +CMGL: xxx,"REC UNREAD","+7915...","16/10/20,22:24;20+12"
+	// Text message
+	//
+	//
+	// Ok
+	
+	const int chartimeout = 100;
+	int i = 0;
+	unsigned long timerStart, prevChar;
+	char c = 0;
+	timerStart = HAL_GetTick();
+	prevChar = 0;
+	size = strlen(answer) - 1;
+	bool is_index_read = false;
+	bool is_message = false;
+	
+	// read indexes of unread messages
+	while(1) 
+	{
+		if (sim900_check_readable()) 
+		{
+			c = UartGSM.Instance->RDR;	//LUart.Instance->TDR = c;							
+			prevChar = HAL_GetTick();
+			if (!is_index_read && (i < tmp_data_size))
+			{
+				tmp_data[i++] = c;
+			}
+			else
+			{
+				if ((i < tmp_string_size) && (c != ','))
+				{
+					string[i++] = c;
+				}
+				else
+				{
+					if (num_messages < tmp_data_size)
+					{
+						indexes[num_messages++] = atoi(string);
+						is_index_read = false;
+					}
+					else
+					{
+						break;
+					}
+				}
+			}
+			
+			if(i >= size)
+			{
+				// find the key word "+CMGL: "
+				if (!memcmp(&tmp_data[i - size - 1],answer, size))
+				{
+					i = 0;
+					is_index_read = true;
+					memset(string, 0, tmp_string_size);
+				}
+			}
+		}
+		if (i >= tmp_data_size)
+			break;
+		
+		if ((unsigned long) (HAL_GetTick() - timerStart) > timeout * 1000UL) 
+			break;
+	}
+	
+	//TODO 1 Only for debug
+	mode = 1;// 0; // make message read 
+	for (int i = 0; i < num_messages; i++)
+	{
+		memset(string, 0, tmp_string_size);
+		memset(tmp_data, 0, tmp_data_size);
+		
+		size = snprintf(string, tmp_string_size, "AT+CMGR=%d,%d\r\n",indexes[i], mode);
+		sim900_send_cmd(string, size);
+		
+		// read message
+		sim900_read_buffer((char *)tmp_data, tmp_data_size, 1);
+		// message end of "\r\n\r\nOk"
+		
+		// find end for header
+		uint16_t symbol_index = 0;
+		while(((symbol_index + 1) < tmp_data_size) &&
+					(tmp_data[symbol_index] == 0) &&
+					(tmp_data[symbol_index] == '\r') &&
+					(tmp_data[symbol_index + 1] == '\n'))
+		{
+			symbol_index++;
+		}
+		
+		// check key word
+		//const char traker_id[] = "$TRAKER_ID";
+		
+		char* key_word_index = (char*)nullptr;
+				
+		key_word_index = (char *)strstr((char *)&tmp_data[symbol_index], traker_id);
+		
+		if (key_word_index != nullptr)
+		{
+			uint8_t index = 0;
+			memset(string, 0, tmp_string_size);
+			uint8_t k = 0;
+			key_word_index += strlen(traker_id);
+			while((index < tmp_string_size) 
+				&& (key_word_index[index] != ';') )
+			{
+				string[k++] = key_word_index[index++];
+			}
+			uint16_t new_traker_id = atoi(string);
+			
+			if (new_traker_id != 0)
+			{
+				DEBUG_PRINTF("new_traker_id = %d\r\n", new_traker_id);
+				system_info.tracker_id = new_traker_id;
+				sprintf(uin_string, "%s,%d,%d,%d\r\n", uin, system_info.tracker_id, system_info.sw_version, system_info.hw_version);
+			}
+		}
+		
+		//const char server_addr[] = "$SERVER_ADDR";
+		key_word_index = (char *)strstr((char *)&tmp_data[symbol_index], server_addr);
+		
+		if (key_word_index != nullptr)
+		{
+			uint8_t index = 0;
+			memset(string, 0, tmp_string_size);
+			uint8_t k = 0;
+			key_word_index += strlen(server_addr);
+			while((index < tmp_string_size) && 
+						(key_word_index[index] != ':'))
+			{
+				string[k++] = key_word_index[index++];
+			}
+			
+			char port_string[8];
+			k = 0; index++;
+			
+			while((k < 8) && 
+				((key_word_index[index] != ';') && (key_word_index[index] != '\r')))
+			{
+				port_string[k++] = key_word_index[index++];
+			}
+			uint16_t new_server_port = atoi(port_string);
+			if (new_server_port != 0)
+			{
+				snprintf(system_info.host_name, 32, "%s", (const char *)string);
+				system_info.host_port = new_server_port;
+				DEBUG_PRINTF("new_server_address = %s:%d\r\n", string, new_server_port);
+			}
+		}
+		
+		mode = 0;
+		memset(string, 0, tmp_string_size);
+		size = snprintf(string, tmp_string_size, "AT+CMGD=%d,%d\r\n",indexes[i], mode);
+		sim900_send_cmd(string, size);
+	}
+
 }
 
 
