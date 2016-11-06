@@ -3,7 +3,7 @@
 <title>Static Call Graph - [STM32L053R8_NUCLEO\STM32L053R8_NUCLEO.axf]</title></head>
 <body><HR>
 <H1>Static Call Graph for image STM32L053R8_NUCLEO\STM32L053R8_NUCLEO.axf</H1><HR>
-<BR><P>#&#060CALLGRAPH&#062# ARM Linker, 5060061: Last Updated: Sun Nov 06 17:21:58 2016
+<BR><P>#&#060CALLGRAPH&#062# ARM Linker, 5060061: Last Updated: Sun Nov 06 18:00:17 2016
 <BR><P>
 <H3>Maximum Stack Usage =        904 bytes + Unknown(Cycles, Untraceable Function Pointers)</H3><H3>
 Call chain for Maximum Stack Depth:</H3>
@@ -976,6 +976,7 @@ Global Symbols
 <BR><BR>[Called By]<UL><LI><a href="#[1ba]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;RTC_Task
 <LI><a href="#[bc]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Command_Task
 <LI><a href="#[99]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Accelero_Task
+<LI><a href="#[1b5]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;RTC_CalendarSet
 </UL>
 
 <P><STRONG><a name="[e7]"></a>GetServerConnectionState</STRONG> (Thumb, 6 bytes, Stack size 0 bytes, gprs_shield_arduino.o(i.GetServerConnectionState))
@@ -2485,6 +2486,7 @@ Global Symbols
 </UL>
 <BR>[Called By]<UL><LI><a href="#[1ba]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;RTC_Task
 <LI><a href="#[99]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Accelero_Task
+<LI><a href="#[1b5]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;RTC_CalendarSet
 </UL>
 
 <P><STRONG><a name="[1b1]"></a>RTC_AlarmStop</STRONG> (Thumb, 20 bytes, Stack size 8 bytes, rtc.o(i.RTC_AlarmStop))
@@ -2511,12 +2513,14 @@ Global Symbols
 <LI><a href="#[121]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_RTC_SetAlarm_IT
 </UL>
 
-<P><STRONG><a name="[1b5]"></a>RTC_CalendarSet</STRONG> (Thumb, 346 bytes, Stack size 48 bytes, rtc.o(i.RTC_CalendarSet))
-<BR><BR>[Stack]<UL><LI>Max Depth = 136<LI>Call Chain = RTC_CalendarSet &rArr; atoi &rArr; strtol &rArr; _strtoul
+<P><STRONG><a name="[1b5]"></a>RTC_CalendarSet</STRONG> (Thumb, 340 bytes, Stack size 48 bytes, rtc.o(i.RTC_CalendarSet))
+<BR><BR>[Stack]<UL><LI>Max Depth = 212<LI>Call Chain = RTC_CalendarSet &rArr; RTC_AlarmConfig &rArr; calendar_decoder &rArr; calendar_check_leap &rArr; __aeabi_idivmod &rArr; __aeabi_uidivmod
 </UL>
 <BR>[Calls]<UL><LI><a href="#[125]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_RTC_SetTime
 <LI><a href="#[123]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_RTC_SetDate
+<LI><a href="#[aa]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;GetParamValue
 <LI><a href="#[1b2]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;RTC_CalendarShow
+<LI><a href="#[ab]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;RTC_AlarmConfig
 <LI><a href="#[1b0]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Get_Alarm_State
 <LI><a href="#[af]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_memclr4
 <LI><a href="#[76]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;atoi

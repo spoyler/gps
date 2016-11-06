@@ -328,9 +328,6 @@ void RTC_CalendarSet(char * gps_msg)
 {
 	//gps_msg format // $GNZDA,201705.089,29,02,2016,,*44
 	
-	if (Get_Alarm_State()) // don't modify rtc while rtc is active
-		return;
-	
   RTC_DateTypeDef new_date = {0};
   RTC_TimeTypeDef new_time = {0};
 	
@@ -339,7 +336,6 @@ void RTC_CalendarSet(char * gps_msg)
 	
 	if (!is_time_sync)
 	{
-	
 		// Hours
 		date_time[0] = gps_msg[7]; date_time[1] = gps_msg[8];
 		new_time.Hours = atoi(date_time);
@@ -384,6 +380,9 @@ void RTC_CalendarSet(char * gps_msg)
 			// 
 			DEBUG_PRINTF("Time is sync, current time:\r\n");
 			RTC_CalendarShow();
+			
+			if (Get_Alarm_State()) // don't modify rtc while rtc is active
+				RTC_AlarmConfig(GetParamValue(WAIT_BEFOR_SLEEP), RTC_ALARM_A);
 		}
 	}
 }
