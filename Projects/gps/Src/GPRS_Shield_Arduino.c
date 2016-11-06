@@ -60,12 +60,15 @@ uint8_t count_try_to_connect = 0;
 extern char uin_string[32];
 extern uint8_t uin_string_size;
 extern const char eof[];
+extern const char event[];
 
 const char traker_id[] = "$traker_id=";
 const char server_addr[] = "$server_addr=";
-const char read_messages_intervel = 10;
+const char read_messages_intervel = 10;	// read sms message everea 10 seconds
+const char connecting_timeout = 30; 		// 30 seconds wait befor reconnecting
 uint32_t last_read_messages_time = 0;
-bool wait_connection = false;
+uint32_t connecting_start_time = 0;
+void Add_Error_InConnection();
 
 
 void delay(int time)
@@ -175,30 +178,30 @@ void GSM_Init(void)//:gprsSerial(tx,rx)
 	DEBUG_PRINTF("Sending AT...");
 	while(!sim900_check_with_cmd("AT\r\n",resp_ok,CMD));
 	DEBUG_PRINTF("Ok\r\n");
-	    
-	DEBUG_PRINTF("Set GSM full functional...");
-	while(!sim900_check_with_cmd("AT+CFUN=1\r\n",resp_ok,CMD));
+	    	  
+	DEBUG_PRINTF("Check SIM status...");  
+	while(!checkSIMStatus());
 	DEBUG_PRINTF("Ok\r\n");
 	
 	DEBUG_PRINTF("Get signal level...");
 	GetSignalLevel();
 	DEBUG_PRINTF("\r\n");
-  
-	DEBUG_PRINTF("Check SIM status...");  
-	while(!checkSIMStatus());
+	
+	const char text_mode_sms[] = "AT+CMGF=1\r\n";
+	sim900_check_with_cmd(text_mode_sms, "OK\r\n", CMD);
+	
+	DEBUG_PRINTF("Set GSM full functional...");
+	while(!sim900_check_with_cmd("AT+CFUN=1\r\n",resp_ok,CMD));
 	DEBUG_PRINTF("Ok\r\n");
 	
 	const char manual_data_cmd[] = "AT+CIPRXGET=1\r\n";	
 	sim900_check_with_cmd(manual_data_cmd, "OK\r\n", CMD);
 	
-	const char text_mode_sms[] = "AT+CMGF=1\r\n";
-	sim900_check_with_cmd(text_mode_sms, "OK\r\n", CMD);
-	
 	SetBoudrate(9600);
 		
 	//debug_simm800(&UartGSM);
 	SetServerConnectionState(NOT_CONNECTED);
-	count_try_to_connect = 0;	
+	count_try_to_connect = 0;
 }
 void GSM_Debug()
 {
@@ -229,53 +232,51 @@ void GSM_Task()
 	if (GetServerConnectionState() == NEED_TO_REBOOT)
 	{
 		DEBUG_PRINTF("Reboot GSM modul\r\n");
+		Set_GSM_Sleep_Mode();
 		GSM_Init();
 	}
 	
-	{
+	
 		tcp_state = is_connected();
+	
+		if (tcp_state == TCP_CLOSED 
+			&& GetServerConnectionState() == CONNECTING)
+		{
+			close();
+			Add_Error_InConnection();
+		}
+	
 		if (tcp_state == TCP_CLOSED)
 		{			
 			is_not_first_data_send = 0;
 			DEBUG_PRINTF("Connecting to %s:%d... ", system_info.host_name, system_info.host_port);
+			SetServerConnectionState(CONNECTING);
+			// start connection to server
 			if (connect(TCP,system_info.host_name, system_info.host_port, 1, 50))
 			{
 				DEBUG_PRINTF("Ok\r\n");
 				is_not_first_data_send = 0;
 				SetServerConnectionState(CONNECTED);
-				wait_connection = false;
-			}
-			else
-			{
-				tcp_state = is_connected();
-				if (tcp_state != TCP_CONNECTING 
-					&& tcp_state != TCP_CONNECT_OK)
-				{
-					DEBUG_PRINTF("Error\r\n");
-					
-					wait_connection = false;
-					count_try_to_connect++;
-					if (count_try_to_connect < MAX_TRY_TO_CONNECT)
-						SetServerConnectionState(NOT_CONNECTED);
-					else
-						if ((count_try_to_connect >= MAX_TRY_TO_CONNECT) &&
-							 (count_try_to_connect < MAX_TRY_NEED_TO_REBOOT))
-						{
-							SetServerConnectionState(ERROR_IN_CONNECTION);
-						}
-						else
-							SetServerConnectionState(NEED_TO_REBOOT);
-				}
-				else
-					wait_connection = true;
 			}
 		}
-		else 
+
+		tcp_state = is_connected();				
+		bool timeout = ((HAL_GetTick() - connecting_start_time) > connecting_timeout*1000);
+		//
+		if (((tcp_state != TCP_CONNECTING)	&&(tcp_state != TCP_CONNECT_OK))
+			||((tcp_state != TCP_CONNECT_OK)	&&(timeout)))
+		{
+			close();	
+			Add_Error_InConnection();
+		}
+
+		
+		//else 
 		if (is_connected() == TCP_CONNECT_OK)		
 		{			
-			if (wait_connection)
+			if (GetServerConnectionState() == CONNECTING)
 			{
-				wait_connection = false;
+				SetServerConnectionState(CONNECTED);
 				DEBUG_PRINTF("Ok\r\n");
 			}
 			//while(1) 
@@ -300,7 +301,28 @@ void GSM_Task()
 					}
 								
 					tmp_data_pos += sprintf((char *)&tmp_data[tmp_data_pos], "%s", data);
-					data[data_size] = 0;		
+					data[data_size] = 0;
+
+					
+					// set event state-------------------------------------------------------
+					for (int i = EVENT_FREE_FALL; i < MAX_EVENTS; i++)
+					{
+						if (GetEventState(i) == EVENT_ACTIVE)
+						{
+							tmp_data_pos += sprintf((char *)&tmp_data[tmp_data_pos], "%s,%d,0\r\n", event, i);
+							
+							SetEventState(i, EVENT_PUSHED_TO_BUFFER);
+							// we must make sure that the event is delivered
+							// flags will be resets, when data will be delivered
+							SetBufferFlags(i);
+							//
+							if (i == EVENT_SLEEP)
+							{
+								//flush message buffer and sed eof
+								while(ReadBuffer(&data, &flags));
+							}
+						}			
+					}					
 					
 					if (!IsDataToSend())
 					{
@@ -314,21 +336,28 @@ void GSM_Task()
 					if(send((const char*)tmp_data, tmp_data_pos) == tmp_data_pos)
 					{
 						DEBUG_PRINTF("Ok\r\n");
+						// check message on events
+						for (int i = EVENT_FREE_FALL; i < MAX_EVENTS; i++)
+						{
+							if (GetEventState(i) == EVENT_PUSHED_TO_BUFFER)
+							{
+							if ((i == EVENT_SLEEP) || (i == EVENT_WAKEUP))
+								SetEventState(i, EVENT_SEND);
+							else
+								SetEventState(i, EVENT_NONE);
+							}
+						}
 					}
 					else
 					{
+						for (int i = EVENT_FREE_FALL; i < MAX_EVENTS; i++)
+						{
+							if (GetEventState(i) == EVENT_PUSHED_TO_BUFFER)
+								SetEventState(i, EVENT_ACTIVE);
+						}
 						close();
 						data_not_send = true;
 						DEBUG_PRINTF("Error\r\n");
-					}
-						
-					// check message on events
-					for (int i = EVENT_FREE_FALL; i < MAX_EVENTS; i++)
-					{
-						if ((i == EVENT_SLEEP) || (i == EVENT_WAKEUP))
-							SetEventState(i, EVENT_SEND);
-						else
-							SetEventState(i, EVENT_NONE);
 					}
 				}
 				HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_15);
@@ -374,10 +403,35 @@ void GSM_Task()
 				}				
 			}								
 		}			
-	}
+
 	if (is_connected() == TCP_CLOSED && (GetEventState(EVENT_SLEEP) == EVENT_SEND))
 	{
 		close();
+	}
+}
+
+void Add_Error_InConnection()
+{
+	DEBUG_PRINTF("Error\r\n");
+	count_try_to_connect++;
+	if (count_try_to_connect < MAX_TRY_TO_CONNECT)
+	{
+		// try to connect again 
+		SetServerConnectionState(NOT_CONNECTED);
+	}
+	else
+	{
+		if ((count_try_to_connect >= MAX_TRY_TO_CONNECT) &&
+			 (count_try_to_connect < MAX_TRY_NEED_TO_REBOOT))
+		{
+			// we cannot connect to server, enter in the sleeping mode without send at "sleep event"
+			SetServerConnectionState(ERROR_IN_CONNECTION);
+		}
+		else
+		{
+			// too many times to connect, something wrong, reboot gsm module
+			SetServerConnectionState(NEED_TO_REBOOT);
+		}
 	}
 }
 
@@ -388,12 +442,13 @@ bool checkPowerUp(void)
 
 void powerUpDown()
 {
+	Set_GSM_Sleep_Mode();
   // power on pulse
-	HAL_GPIO_WritePin(GPIOB, GPIO_PIN_12, GPIO_PIN_RESET);// digitalWrite(pin,LOW);
+	HAL_GPIO_WritePin(GPIOB, GPIO_PIN_12, GPIO_PIN_SET);// digitalWrite(pin,LOW);
   delay(1000);
-	HAL_GPIO_WritePin(GPIOB, GPIO_PIN_12, GPIO_PIN_SET);//  digitalWrite(pin,HIGH);
+	HAL_GPIO_WritePin(GPIOB, GPIO_PIN_12, GPIO_PIN_RESET);//  digitalWrite(pin,HIGH);
   delay(1000);
-	HAL_GPIO_WritePin(GPIOB, GPIO_PIN_12, GPIO_PIN_RESET);//digitalWrite(pin,LOW);
+	HAL_GPIO_WritePin(GPIOB, GPIO_PIN_12, GPIO_PIN_SET);//digitalWrite(pin,LOW);
   delay(1000);
 }
 
@@ -585,6 +640,9 @@ bool connect(Protocol ptl,const char * host, int port, int timeout, int chartime
     if((strstr(resp,"CONNECT OK") != NULL) ||
 			 (strstr(resp, "ALREADY CONNECT") != NULL))	
         return true;
+		
+	// save time when we try to connect
+	connecting_start_time = HAL_GetTick();
 		
     return false;
 }
@@ -781,6 +839,7 @@ uint8_t Set_GSM_Sleep_Mode()
 
   sim900_send_cmd(cmd_sleep, strlen(cmd_sleep));
   sim900_read_buffer(resp, 64, 1);
+  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_12, GPIO_PIN_RESET);//  digitalWrite(pin,HIGH);
   if (strstr(resp,"NORMAL POWER DOWN") != NULL)
 		return true;
 	else
@@ -789,6 +848,10 @@ uint8_t Set_GSM_Sleep_Mode()
 
 void SetServerConnectionState(uint8_t new_state)
 {
+	if (new_state == CONNECTED)
+	{
+		count_try_to_connect = 0;
+	}
 	server_connection_state = new_state;
 }
 

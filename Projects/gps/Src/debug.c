@@ -15,10 +15,10 @@
 
 const uint32_t debug_time = 5000;
 const uint32_t debug_message_max_size = 32;
-const uint32_t debug_commands_size = 11;
-const char debug_ccommands[debug_commands_size][8] = {{"dbg"}, {"toggle"}, {"gps"}, {"gsm"}, 
+const uint32_t debug_commands_size = 9;
+const char debug_ccommands[debug_commands_size][8] = {{"\0"}, {"toggle"}, {"gps"}, {"gsm"}, 
 																											{"acc"}, {"lamp_on"}, {"lamp_off"}, {"volt"}, 
-																											{"id"}, {"stop"}, {"help"}};
+																											{"id"}};
 
 uint32_t debug_state = 0;
 uint32_t debug_toggle_start_time = 0;
@@ -83,15 +83,16 @@ void Check_Debug_Mode()
 	__HAL_UNLOCK(&LUart); 
 	HAL_NVIC_EnableIRQ(LPUART1_IRQn);
 	
-	DEBUG_PRINTF("Pleease enter \'dbg\' to enter in debug mode:\r\n");
+	DEBUG_PRINTF("Pleease enter \'del\' to enter in debug mode:\r\n");
 	uint32_t start_time = HAL_GetTick();
 	
 	while((HAL_GetTick() - start_time) < debug_time)
 	{
 		if (Get_Debug_State(DBG))
 		{
+			DEBUG_PRINTF("Pleease enter \'Esc\' to exit from debug mode.\r\n");
 			DEBUG_PRINTF("Debug mode. Enter command to view debug messages:\r\n");
-			for (int i = 0; i < debug_commands_size; ++i)
+			for (int i = 1; i < debug_commands_size; ++i)
 			{
 				DEBUG_PRINTF("%s\r\n", debug_ccommands[i]);
 			}
@@ -213,6 +214,23 @@ void RNG_LPUART1_IRQHandler(void)
 
 		debug_message_string[debug_message_index] = c;
 		LUart.Instance->TDR  = c;
+		
+		if (debug_message_string[debug_message_index] == 127)
+		{
+			debug_state = (1 << 0) | 1;
+			memset(debug_message_string, 0, debug_message_max_size);
+			debug_message_index = 0;
+			HAL_GPIO_WritePin(GPIOC, GPIO_PIN_15, GPIO_PIN_SET);
+			return;
+		}
+		
+		if (debug_message_string[debug_message_index] == 27)
+		{
+			Stop_Debug_Mode();
+			debug_state = 0;
+			HAL_GPIO_WritePin(GPIOC, GPIO_PIN_15, GPIO_PIN_SET);
+		}
+			
 				
 		if (debug_message_index > 0)
 		{
@@ -225,12 +243,13 @@ void RNG_LPUART1_IRQHandler(void)
 					{						
 						// set true status
 						debug_state = (1 << i) | 1;
-												
+																		
 						// exit form debug mode
 						if (i == STOP)
 						{
 							Stop_Debug_Mode();
 							debug_state = 0;
+							HAL_GPIO_WritePin(GPIOC, GPIO_PIN_15, GPIO_PIN_SET);
 						}
 					}
 				}				

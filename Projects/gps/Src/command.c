@@ -307,9 +307,14 @@ void Command_Task()
 				// set motion state------------------------------------------------------
 				PushToBuffer(NO_ACTION, "%s,%d,%d,%d,%d,%d,%d\r\n", ag, acc_data->AXIS_X, acc_data->AXIS_Y, acc_data->AXIS_Z,
 																					gyro_data->AXIS_X, gyro_data->AXIS_Y, gyro_data->AXIS_Z);
+																					
+				// set adc result--------------------------------------------------------
+				PushToBuffer(NO_ACTION, "%s,%d,%d\r\n", volt, abs(adc_data[0]), abs(adc_data[1]));
 				
+				
+				// push event to output data in gsm routing
 				// set event state-------------------------------------------------------
-				for (int i = EVENT_FREE_FALL; i < MAX_EVENTS; i++)
+/*				for (int i = EVENT_FREE_FALL; i < MAX_EVENTS; i++)
 				{
 					if (GetEventState(i) == EVENT_ACTIVE)
 					{
@@ -320,10 +325,7 @@ void Command_Task()
 						SetBufferFlags(i);
 					}					
 				}
-				
-				// set adc result--------------------------------------------------------
-				PushToBuffer(NO_ACTION, "%s,%d,%d\r\n", volt, abs(adc_data[0]), abs(adc_data[1]));
-				
+*/				
 				// push end of file cmd -------------------------------------------------
 				//PushToBuffer(NO_ACTION, "%s\r\n", eof);	
 

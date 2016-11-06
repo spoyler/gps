@@ -26,6 +26,9 @@ SensorAxesRaw_t gyro_data;
 
 void ACCELERO_Init()
 {
+	mems_int1_detected = 0;
+	mems_int2_detected = 0;
+	
 	DEBUG_PRINTF("Accelero Init...");
 	// GYRO INit
 	BSP_GYRO_DeInit(&GYRO_handle);
@@ -55,6 +58,8 @@ void ACCELERO_Init()
 		DEBUG_PRINTF("Ok\r\n");
 	else
 		DEBUG_PRINTF("False\r\n");
+	
+	
 }
 
 
@@ -190,6 +195,7 @@ void HAL_GPIO_EXTI_Callback( uint16_t GPIO_Pin )
 	if ( GPIO_Pin == M_INT1_PIN )
   {
 		mems_int1_detected = 1;
+		SetWakeupSource(WAKEUP_SOURCE_ACC);
   }
 	else
 		if (GPIO_Pin == M_INT2_PIN)

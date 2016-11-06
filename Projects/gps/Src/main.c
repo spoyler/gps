@@ -27,6 +27,8 @@
 #include "command.h"
 #include "watchdog.h"
 
+const char main_loop_timeout = 60; // sec
+uint32_t main_loop_time = 0;
 
 /** @defgroup IHM04A1_Example_for_4_Unidirectionnal_motors
   * @{
@@ -51,10 +53,9 @@ int main(void)
 {
 	
 	Init_All();
-	
 	while(1)
 	{
-		//Watchdog_Refresh();
+		main_loop_time = HAL_GetTick();
 		if (!Get_Debug_State(DBG))
 		{
 			Accelero_Task();
@@ -69,6 +70,17 @@ int main(void)
 		}
 	}
 }
+void CheckMainLoopTime(void)
+{
+	if ((main_loop_time != 0)
+		&&(abs(HAL_GetTick() - main_loop_time) > main_loop_timeout*1000))
+	{
+		// disable systick interrupt
+		HAL_NVIC_DisableIRQ(SysTick_IRQn);
+		//
+		while(1);
+	}
+}
 
 void Init_All()
 {
@@ -80,9 +92,8 @@ void Init_All()
   /* Set Systick Interrupt to the highest priority to have HAL_Delay working*/
   /* under the user button handler */
 	HAL_NVIC_SetPriority(SysTick_IRQn, 0x0, 0x0);    
-	//wdt_time = HAL_GetTick();
 	//
-	//Watchdog_Init();
+	Watchdog_Init();
 	//
 	GPIO_Init();
 	//
@@ -193,6 +204,7 @@ void GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
 	
 	HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);	
+	HAL_GPIO_WritePin(GPIOB, GPIO_PIN_12, GPIO_PIN_RESET);//  digitalWrite(pin,HIGH);
 	
 	// Alarm port pin
 	GPIO_InitStruct.Pin = GPIO_PIN_15;

@@ -52,6 +52,7 @@ void SystemClock_Config(void);
 void Error_Handler(uint16_t error);
 void Init_All();
 void ReInitPeriph();
+void CheckMainLoopTime(void);
 
 #endif /* __MAIN_H */
 

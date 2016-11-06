@@ -53,6 +53,12 @@ int sim900_check_readable()
   return (uart->Instance->ISR & UART_FLAG_RXNE) ? 1 : 0;
 }
 
+char sim900_check_read()
+{
+  char c = uart->Instance->RDR; 			//LUart.Instance->TDR = c;
+	return c;
+}
+
 int sim900_wait_readable (int wait_time)
 {
     unsigned long timerStart;

@@ -49,9 +49,10 @@ typedef enum {
 typedef enum
 {
 	NOT_CONNECTED = 0,
-	CONNECTED = 1,
-	ERROR_IN_CONNECTION = 2,
-	NEED_TO_REBOOT = 3
+	CONNECTING = 1,
+	CONNECTED = 2,
+	ERROR_IN_CONNECTION = 3,
+	NEED_TO_REBOOT = 4
 }TServerConnectionState;
 
 typedef enum

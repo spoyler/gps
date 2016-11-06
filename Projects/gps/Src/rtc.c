@@ -646,8 +646,8 @@ void RTC_Task()
 		if (GetWakeupSource() == WAKEUP_SOURCE_TIMER)
 		{
 			DEBUG_PRINTF("WAKEUP_SOURCE_TIMER\r\n");
-			SetEventState(EVENT_SLEEP, EVENT_ACTIVE);
-			sleep_event = EVENT_ACTIVE;
+//			SetEventState(EVENT_SLEEP, EVENT_ACTIVE);
+//			sleep_event = EVENT_ACTIVE;			
 		}
 	}
 	

@@ -68,6 +68,7 @@ void  sim900_send_AT(void);
 void  sim900_send_End_Mark(void);
 boolean  sim900_wait_for_resp(const char* resp, DataType type);
 boolean  sim900_check_with_cmd(const char* cmd, const char *resp, DataType type);
+char sim900_check_read();
 //boolean  sim900_check_with_cmd(const __FlashStringHelper* cmd, const char *resp, DataType type, unsigned int timeout = DEFAULT_TIMEOUT, unsigned int chartimeout = DEFAULT_INTERCHAR_TIMEOUT);
 
 #endif
