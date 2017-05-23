@@ -106,10 +106,8 @@ void Command_Init()
 	system_info.sw_version = 1;
 	system_info.hw_version = 1;
 	system_info.host_port = 8121;
-	snprintf(system_info.host_name, 32, "cli-1.srv.velogorod.org");
-	
-	
-	
+	snprintf(system_info.host_name, 80, "dev2.velogorod.org");
+		
 	// set period of data send 10 sec
 	
 	ServerCommands[1] = 10;
