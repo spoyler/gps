@@ -15,10 +15,10 @@
 
 const uint32_t debug_time = 5000;
 const uint32_t debug_message_max_size = 32;
-const uint32_t debug_commands_size = 9;
+const uint32_t debug_commands_size = 10;
 const char debug_ccommands[debug_commands_size][8] = {{"\0"}, {"toggle"}, {"gps"}, {"gsm"}, 
 																											{"acc"}, {"lamp_on"}, {"lamp_off"}, {"volt"}, 
-																											{"id"}};
+																											{"id"}, {"help"}};
 
 uint32_t debug_state = 0;
 uint32_t debug_toggle_start_time = 0;
@@ -63,6 +63,16 @@ PUTCHAR_PROTOTYPE
   return ch;
 }
 
+void Write_Help_Message()
+{
+		DEBUG_PRINTF("Pleease enter \'Esc\' to exit from debug mode.\r\n");
+		DEBUG_PRINTF("Debug mode. Enter command to view debug messages:\r\n");
+		for (int i = 1; i < debug_commands_size; ++i)
+		{
+			DEBUG_PRINTF("%s\r\n", debug_ccommands[i]);
+		}
+}
+
 
 void debug_simm800(UART_HandleTypeDef * gsm_uart)
 {
@@ -90,12 +100,7 @@ void Check_Debug_Mode()
 	{
 		if (Get_Debug_State(DBG))
 		{
-			DEBUG_PRINTF("Pleease enter \'Esc\' to exit from debug mode.\r\n");
-			DEBUG_PRINTF("Debug mode. Enter command to view debug messages:\r\n");
-			for (int i = 1; i < debug_commands_size; ++i)
-			{
-				DEBUG_PRINTF("%s\r\n", debug_ccommands[i]);
-			}
+			Write_Help_Message();
 			break;
 		}
 	}
@@ -171,11 +176,20 @@ void Debug_Task()
 		}
 	}
 	
+	// print tracker id
 	if (Get_Debug_State(ID))
 	{
 		Command_Debug();
 		Reset_Debug_State(ID);
 	}
+	
+	// print help message
+	if (Get_Debug_State(HELP))
+	{
+		Write_Help_Message();
+		Reset_Debug_State(HELP);
+	}
+	
 }
 
 void Stop_Debug_Mode()
