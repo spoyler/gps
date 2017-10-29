@@ -617,7 +617,8 @@ void RTC_Task()
 	}
 
 	if(((sleep_event == EVENT_ACTIVE) || (force_sleep)) && 
-		 ((GetEventState(EVENT_SLEEP) == EVENT_SEND) || (GetServerConnectionState() >= ERROR_IN_CONNECTION)))
+		 ((((GetEventState(EVENT_SLEEP) == EVENT_SEND) || (GetServerConnectionState() >= ERROR_IN_CONNECTION))) ||
+			(((GetEventState(EVENT_SLEEP) == EVENT_NONE) && (GetServerConnectionState() == NOT_CONNECTED)))))
 	{
 		//DEBUG_PRINTF("sleep_event = %d\tforce_sleep = %d\tGetEventState(EVENT_SLEEP) = %d\tGetServerConnectionState() = %d\r\n", 
 		//sleep_event, force_sleep, GetEventState(EVENT_SLEEP), GetServerConnectionState());

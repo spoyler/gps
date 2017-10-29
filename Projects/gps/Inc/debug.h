@@ -30,8 +30,9 @@ enum debug_bit_possition
 	LAMP_OFF = 6,
 	CHARG = 7,
 	ID = 8,
-	HELP = 9,
-	STOP = 10
+	SLEEP = 9,
+	HELP = 10,
+	STOP = 11
 };
 
 

@@ -12,13 +12,16 @@
 #include "adc.h"
 #include "accelero.h"
 #include "command.h"
+#include "rtc.h"
+
+extern  uint8_t force_sleep;
 
 const uint32_t debug_time = 5000;
 const uint32_t debug_message_max_size = 32;
-const uint32_t debug_commands_size = 10;
+const uint32_t debug_commands_size = 11;
 const char debug_ccommands[debug_commands_size][8] = {{"\0"}, {"toggle"}, {"gps"}, {"gsm"}, 
 																											{"acc"}, {"lamp_on"}, {"lamp_off"}, {"volt"}, 
-																											{"id"}, {"help"}};
+																											{"id"}, {"sleep"}, {"help"}};
 
 uint32_t debug_state = 0;
 uint32_t debug_toggle_start_time = 0;
@@ -181,6 +184,22 @@ void Debug_Task()
 	{
 		Command_Debug();
 		Reset_Debug_State(ID);
+	}
+	
+	// go to sleep mode	
+	if (Get_Debug_State(SLEEP))
+	{
+		Reset_Debug_State(SLEEP);
+		force_sleep = 1;
+		// USE RTC_Task to enter a sleep mode
+		// Tracker can to wake up from timer or giroscope
+		RTC_Task();		
+		force_sleep = 0;		
+		debug_state = 1;
+		__HAL_UART_ENABLE_IT(&LUart, UART_IT_ORE | UART_IT_RXNE);
+		/* Process Unlocked */
+		__HAL_UNLOCK(&LUart); 
+		HAL_NVIC_EnableIRQ(LPUART1_IRQn);
 	}
 	
 	// print help message
