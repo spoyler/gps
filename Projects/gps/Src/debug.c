@@ -19,7 +19,7 @@ extern  uint8_t force_sleep;
 const uint32_t debug_time = 5000;
 const uint32_t debug_message_max_size = 32;
 const uint32_t debug_commands_size = 11;
-const char debug_ccommands[debug_commands_size][8] = {{"\0"}, {"toggle"}, {"gps"}, {"gsm"}, 
+const char debug_ccommands[debug_commands_size][9] = {{"\0"}, {"toggle"}, {"gps"}, {"gsm"}, 
 																											{"acc"}, {"lamp_on"}, {"lamp_off"}, {"volt"}, 
 																											{"id"}, {"sleep"}, {"help"}};
 

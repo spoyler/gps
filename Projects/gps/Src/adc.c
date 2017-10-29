@@ -17,6 +17,7 @@ ADC_ChannelConfTypeDef        sConfig;
 __IO uint32_t uwADCxConvertedValue = 0;
 
 const uint8_t num_ch = 4;
+const uint8_t kDeleyBeforeADC = 1; 		// in milisecons
 uint16_t adc_result[num_ch];
 
 int32_t dif_adc_result[2];
@@ -65,40 +66,39 @@ void ADC_Init()
   AdcHandle.Init.DMAContinuousRequests = DISABLE;
  
   /* Initialize ADC peripheral according to the passed parameters */
- HAL_ADC_Init(&AdcHandle);
+	HAL_ADC_Init(&AdcHandle);
   
   
   /* ### - 2 - Start calibration ############################################ */
   HAL_ADCEx_Calibration_Start(&AdcHandle, ADC_SINGLE_ENDED);
 	
 	
-/*	sConfig.Channel = ADC_CHANNEL_17;    
-  HAL_ADC_ConfigChannel(&AdcHandle, &sConfig);
-	sConfig.Channel = ADC_CHANNEL_18;    
-  HAL_ADC_ConfigChannel(&AdcHandle, &sConfig);
-	
-	return;
-	
-	*/
 	sConfig.Channel = ADC_CHANNEL_4;    
   HAL_ADC_ConfigChannel(&AdcHandle, &sConfig);
-	sConfig.Channel = ADC_CHANNEL_5;    
+	sConfig.Channel = ADC_CHANNEL_5; 
   HAL_ADC_ConfigChannel(&AdcHandle, &sConfig);
 	sConfig.Channel = ADC_CHANNEL_6;    
   HAL_ADC_ConfigChannel(&AdcHandle, &sConfig);
 	sConfig.Channel = ADC_CHANNEL_7;    
   HAL_ADC_ConfigChannel(&AdcHandle, &sConfig);
-	
-	HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0, GPIO_PIN_SET);
-	HAL_GPIO_WritePin(GPIOB, GPIO_PIN_1, GPIO_PIN_SET);
 }
 
 void ADC_Task()
 {
 	int i = 0;
 	
+	GPIO_InitTypeDef GPIO_InitStruct;
 	
-	HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0, GPIO_PIN_RESET);
+	GPIO_InitStruct.Pin = GPIO_PIN_1;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
+	HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);	
+	
+	HAL_GPIO_WritePin(GPIOB, GPIO_PIN_1, GPIO_PIN_RESET);
+	HAL_Delay(kDeleyBeforeADC);
+	
+	
   /*##- 4- Start the conversion process #######################################*/  
   HAL_ADC_Start(&AdcHandle);
 	
@@ -110,28 +110,16 @@ void ADC_Task()
     {
       /*##-6- Get the converted value of regular channel  ########################*/
       adc_result[i++] = HAL_ADC_GetValue(&AdcHandle);
-			
-			if (i == 2)
-			{
-				HAL_ADC_Stop(&AdcHandle);
-				HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0, GPIO_PIN_SET);
-				HAL_GPIO_WritePin(GPIOB, GPIO_PIN_1, GPIO_PIN_RESET);
-				HAL_ADC_Start(&AdcHandle);
-			}
-			
+						
 			
 			if (i == num_ch)
 			{
 				HAL_ADC_Stop(&AdcHandle);
-				HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0, GPIO_PIN_SET);
-				HAL_GPIO_WritePin(GPIOB, GPIO_PIN_1, GPIO_PIN_SET);
-				i = 0;
-/*			while(i < num_ch)
-				{
-					DEBUG_PRINTF("adc[%d] = 0x%x\r\n", i, adc_result[i]);
-					i++;
-				}
-*/					
+				GPIO_InitStruct.Pin = GPIO_PIN_1;
+				GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+				GPIO_InitStruct.Pull = GPIO_NOPULL;
+				GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
+				HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);				
 				break;
 			}
     }
@@ -157,8 +145,8 @@ void ADC_Debug()
 
 int32_t * Get_ADC_Data()
 {
-	dif_adc_result[0] = adc_result[1] - adc_result[0];
-	dif_adc_result[1] = adc_result[3] - adc_result[2];
+	dif_adc_result[0] = adc_result[0] - adc_result[1];
+	dif_adc_result[1] = adc_result[2] - adc_result[3];
 	
 	return 	dif_adc_result;
 }

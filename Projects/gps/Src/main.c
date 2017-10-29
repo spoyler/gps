@@ -178,15 +178,16 @@ void GPIO_Init(void)
 	HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);	
 	
 	HAL_GPIO_WritePin(GPIOB, GPIO_PIN_9, GPIO_PIN_SET);
-	
+		
 	//ADC
-	GPIO_InitStruct.Pin = GPIO_PIN_0 | GPIO_PIN_1;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+	// control output
+	GPIO_InitStruct.Pin = GPIO_PIN_1;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
 	
 	HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);	
-	
+	// adc channels
 	GPIO_InitStruct.Pin = GPIO_PIN_4 | GPIO_PIN_5 | GPIO_PIN_6 | GPIO_PIN_7;
   GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
@@ -229,7 +230,7 @@ void GPIO_Init(void)
 	 /* Configure GPIO PINs to detect Interrupts */
   GPIO_InitStruct.Pin = GPIO_PIN_2;
   GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING_FALLING;
-  GPIO_InitStruct.Pull  = GPIO_PULLUP;
+  GPIO_InitStruct.Pull  = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
   
   /* Enable and set EXTI Interrupt priority */
