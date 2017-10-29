@@ -78,8 +78,8 @@ void Set_Output_Msg()
 	
 	char output_msg_state[19] = {0};
 	
-	output_msg_state[rmc_pos] = 1;
-	output_msg_state[gga_pos] = 1;
+	output_msg_state[rmc_pos] = 5;
+	output_msg_state[gga_pos] = 5;
 	output_msg_state[zda_pos] = 5;
 	
 	msg_pos += sprintf(gps_output_message, "%s", set_output_msg);
