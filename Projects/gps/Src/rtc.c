@@ -13,6 +13,8 @@
 #include "GPRS_Shield_Arduino.h"
 #include "watchdog.h"
 
+#define ALWAYS_ON
+
 const uint32_t START_YEAR = 1970;
 const uint32_t BASE_YEAR = 2000;
 const uint8_t month_day[] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
@@ -381,8 +383,10 @@ void RTC_CalendarSet(char * gps_msg)
 			DEBUG_PRINTF("Time is sync, current time:\r\n");
 			RTC_CalendarShow();
 			
-			if (Get_Alarm_State()) // don't modify rtc while rtc is active
+#ifndef ALWAYS_ON
+			if (Get_Alarm_State() && !GetChargingState()) // don't modify rtc while rtc is active
 				RTC_AlarmConfig(GetParamValue(WAIT_BEFOR_SLEEP), RTC_ALARM_A);
+#endif		
 		}
 	}
 }
@@ -557,7 +561,7 @@ void RTC_AlarmConfig(uint32_t sec, uint32_t alarm_type)
    /*##-2- Configure the RTC Alarm peripheral #################################*/
   /* Set Alarm to 02:20:30 
      RTC Alarm Generation: Alarm on Hours, Minutes and Seconds */
-  alarm.Alarm = RTC_ALARM_A;
+  alarm.Alarm = alarm_type;
   alarm.AlarmDateWeekDay = 0; //calendar_week_day(date.Year, date.Month, date.Date);
   alarm.AlarmDateWeekDaySel = RTC_ALARMDATEWEEKDAYSEL_WEEKDAY;
   alarm.AlarmMask = RTC_ALARMMASK_DATEWEEKDAY;
@@ -650,12 +654,12 @@ void RTC_Task()
 //			sleep_event = EVENT_ACTIVE;			
 		}
 	}
-	
+#ifndef ALWAYS_ON
 	if (is_time_sync && !Get_Alarm_State() && !GetChargingState())
 	{
 		RTC_AlarmConfig(GetParamValue(WAIT_BEFOR_SLEEP), RTC_ALARM_A);
 	}
-	
+#endif	
 }
 
 
