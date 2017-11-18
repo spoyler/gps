@@ -48,6 +48,9 @@ void GPS_Init()
 	
   __HAL_UART_ENABLE_IT(&UartGPS, UART_IT_ORE | UART_IT_RXNE);
 	
+	// off sleep mode
+	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_11, GPIO_PIN_SET);
+	
 	/* Process Unlocked */
 	__HAL_UNLOCK(&UartGPS); 
 	HAL_NVIC_EnableIRQ(USART1_IRQn);
@@ -129,6 +132,9 @@ void SetGPSSleepMode()
 	DEBUG_PRINTF(gps_output_message);
 		
 	GPS_Send_Message(gps_output_message);
+	
+	// on sleep mode
+	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_11, GPIO_PIN_RESET);
 }
 
 /**
